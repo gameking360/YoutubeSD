@@ -6,7 +6,7 @@ Trabalho final de Sistemas Distribuídos — FURB.
 ## Estrutura
 
 ```
-apphost/      orquestração com .NET Aspire
+Orchestrador/YoutubeOrchestrador/      orquestração com .NET Aspire
 services/
   identity/   usuários
   security/   autenticação e autorização
