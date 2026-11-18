@@ -1,0 +1,27 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+
+# Java
+target/
+build/
+.gradle/
+*.class
+
+# Node
+node_modules/
+dist/
+
+# IDEs
+.idea/
+.vscode/
+.vs/
+*.iml
+
+# Sistema e ambiente
+.DS_Store
+Thumbs.db
+.env
+*.log

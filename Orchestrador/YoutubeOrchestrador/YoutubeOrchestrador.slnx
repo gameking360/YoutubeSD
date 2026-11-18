@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="YoutubeOrchestrador.AppHost/YoutubeOrchestrador.AppHost.csproj" />
+  <Project Path="YoutubeOrchestrador.ServiceDefaults/YoutubeOrchestrador.ServiceDefaults.csproj" />
+</Solution>
