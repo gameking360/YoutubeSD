@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="../../services/upload/upload/upload/upload.csproj" />
   <Project Path="YoutubeOrchestrador.AppHost/YoutubeOrchestrador.AppHost.csproj" />
   <Project Path="YoutubeOrchestrador.ServiceDefaults/YoutubeOrchestrador.ServiceDefaults.csproj" />
 </Solution>

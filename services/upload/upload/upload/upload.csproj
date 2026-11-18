@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+	  <UseAppHost>false</UseAppHost>
+
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Orchestrador\YoutubeOrchestrador\YoutubeOrchestrador.ServiceDefaults\YoutubeOrchestrador.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>

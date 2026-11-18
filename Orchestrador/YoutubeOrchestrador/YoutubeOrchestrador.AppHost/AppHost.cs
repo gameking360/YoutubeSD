@@ -15,7 +15,8 @@ var kafka = builder.AddKafka("kafka", port: 9092)
         .WithLifetime(ContainerLifetime.Persistent));
 
 
-
+builder.AddProject<Projects.upload>("uploadService") 
+    .WithHttpHealthCheck("/health");
 
 
 
