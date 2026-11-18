@@ -15,8 +15,4 @@
     <PackageReference Include="Aspire.Hosting.Redis" Version="13.6.5" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\YoutubeOrchestrador.ServiceDefaults\YoutubeOrchestrador.ServiceDefaults.csproj" />
-  </ItemGroup>
-
 </Project>
