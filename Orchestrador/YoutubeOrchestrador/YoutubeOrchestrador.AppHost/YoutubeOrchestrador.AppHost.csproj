@@ -6,13 +6,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AspireUseCliBundle>true</AspireUseCliBundle>
+    <NoWarn>$(NoWarn);ASPIRECERTIFICATES001</NoWarn>
     <UserSecretsId>9ad32019-90a6-47b5-8c64-d115f658754f</UserSecretsId>
 	  <UseAppHost>false</UseAppHost>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.Kafka" Version="13.6.5" />
+    <PackageReference Include="Aspire.Hosting.MySql" Version="13.6.5" />
     <PackageReference Include="Aspire.Hosting.Redis" Version="13.6.5" />
+    <PackageReference Include="MySqlConnector" Version="2.6.2" />
   </ItemGroup>
 
   <ItemGroup>
