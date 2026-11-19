@@ -1,13 +1,38 @@
 package br.furb.youtubesd.download;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest(properties = "download.instance-id=teste-1")
+@AutoConfigureMockMvc
 class DownloadApplicationTests {
 
+	@Autowired
+	private MockMvc mockMvc;
+
 	@Test
-	void contextLoads() {
+	void healthRespondeComIdentificacaoDaInstancia() throws Exception {
+		mockMvc.perform(get("/health"))
+				.andExpect(status().isOk())
+				.andExpect(header().string("X-Instance-Id", "teste-1"));
+	}
+
+	@Test
+	void rotaInexistenteRetornaProblemDetail() throws Exception {
+		mockMvc.perform(get("/rota-inexistente"))
+				.andExpect(status().isNotFound())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+				.andExpect(jsonPath("$.status").value(404));
 	}
 
 }
