@@ -1,6 +1,10 @@
 spring:
   application:
     name: download
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/download_db}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:root123}
 
 server:
   port: ${PORT:8080}
@@ -16,8 +20,10 @@ management:
         include: health
   endpoint:
     health:
+      show-components: always
       probes:
         enabled: true
       group:
         liveness:
+          include: livenessState
           additional-path: "server:/alive"

@@ -13,7 +13,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "download.instance-id=teste-1")
+@SpringBootTest(properties = {
+		"download.instance-id=teste-1",
+		"management.health.db.enabled=false"
+})
 @AutoConfigureMockMvc
 class DownloadApplicationTests {
 
