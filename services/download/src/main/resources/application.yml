@@ -15,6 +15,19 @@ spring:
       password: ${SPRING_DATA_REDIS_PASSWORD:root123}
       timeout: 200ms
       connect-timeout: 500ms
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: download
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    listener:
+      ack-mode: record
 
 server:
   port: ${PORT:8080}
@@ -22,6 +35,10 @@ server:
 download:
   instance-id: ${INSTANCE_ID:local}
   progress-cache-ttl: ${PROGRESS_CACHE_TTL:1h}
+
+logging:
+  level:
+    org.apache.kafka: warn
 
 management:
   health:
