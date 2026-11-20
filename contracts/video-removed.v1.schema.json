@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "video-removed.v1.schema.json",
+  "title": "VideoRemoved v1",
+  "description": "Publicado pelo Upload no tópico video.removed quando um vídeo publicado deixa de estar disponível. Chave da mensagem: videoId.",
+  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "VideoRemoved" },
+    "version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["videoId", "removedAt"],
+      "properties": {
+        "videoId": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string" },
+        "removedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

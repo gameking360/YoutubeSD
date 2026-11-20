@@ -1,0 +1,22 @@
+{
+  "messageId": "3f1c2b8e-6a1d-4c9e-9f2a-7b5d1e0c4a11",
+  "correlationId": "456",
+  "type": "VideoPublished",
+  "version": 1,
+  "occurredAt": "2026-11-20T10:30:00Z",
+  "payload": {
+    "videoId": "456",
+    "ownerId": "123",
+    "title": "Aula 1",
+    "visibility": "PUBLIC",
+    "durationSec": 1820,
+    "hlsBucket": "videos-hls",
+    "masterKey": "456/master.m3u8",
+    "renditions": [
+      { "name": "360p", "width": 640, "height": 360, "bandwidth": 800000 },
+      { "name": "720p", "width": 1280, "height": 720, "bandwidth": 2800000 }
+    ],
+    "thumbnailKey": "456/thumb.jpg",
+    "publishedAt": "2026-11-20T10:29:58Z"
+  }
+}
