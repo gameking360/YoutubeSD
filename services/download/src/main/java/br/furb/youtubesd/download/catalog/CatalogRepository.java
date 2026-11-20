@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -78,6 +79,25 @@ public class CatalogRepository {
             return RemovalResult.APPLIED;
         }
         return lastEventAt(removal.videoId()).isPresent() ? RemovalResult.STALE : RemovalResult.NOT_FOUND;
+    }
+
+    public List<VideoSummary> findPublic(int offset, int limit) {
+        return jdbc.sql("""
+                        SELECT video_id, title, duration_sec, thumbnail_key, published_at
+                        FROM video_catalog
+                        WHERE status = 'PUBLISHED' AND visibility = 'PUBLIC'
+                        ORDER BY published_at DESC, video_id
+                        LIMIT :limit OFFSET :offset
+                        """)
+                .param("limit", limit)
+                .param("offset", offset)
+                .query((rs, row) -> new VideoSummary(
+                        rs.getString("video_id"),
+                        rs.getString("title"),
+                        rs.getInt("duration_sec"),
+                        rs.getString("thumbnail_key"),
+                        rs.getObject("published_at", LocalDateTime.class).toInstant(ZoneOffset.UTC)))
+                .list();
     }
 
     private Optional<Instant> lastEventAt(String videoId) {

@@ -41,6 +41,12 @@ download:
   topics:
     video-published: ${KAFKA_TOPIC_VIDEO_PUBLISHED:video.published}
     video-removed: ${KAFKA_TOPIC_VIDEO_REMOVED:video.removed}
+  storage:
+    endpoint: ${AWS_ENDPOINT_URL:http://localhost:4566}
+    region: ${AWS_REGION:us-east-1}
+    access-key: ${AWS_ACCESS_KEY_ID:test}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:test}
+    hls-bucket: ${HLS_BUCKET:videos-hls}
 
 logging:
   level:
