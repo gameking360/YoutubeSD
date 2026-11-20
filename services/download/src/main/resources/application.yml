@@ -8,6 +8,13 @@ spring:
   flyway:
     sql-migration-prefix: ""
     sql-migration-separator: "_"
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:root123}
+      timeout: 200ms
+      connect-timeout: 500ms
 
 server:
   port: ${PORT:8080}
@@ -16,6 +23,9 @@ download:
   instance-id: ${INSTANCE_ID:local}
 
 management:
+  health:
+    redis:
+      enabled: false
   endpoints:
     web:
       base-path: /

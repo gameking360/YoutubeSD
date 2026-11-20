@@ -1,6 +1,6 @@
 package br.furb.youtubesd.download.progress;
 
-import br.furb.youtubesd.download.MySqlTestConfiguration;
+import br.furb.youtubesd.download.TestcontainersConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(MySqlTestConfiguration.class)
+@Import(TestcontainersConfiguration.class)
 class ProgressRepositoryTest {
 
     private static final Instant T1 = Instant.parse("2026-11-19T10:00:00.000Z");

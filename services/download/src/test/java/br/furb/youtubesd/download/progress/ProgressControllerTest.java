@@ -1,6 +1,6 @@
 package br.furb.youtubesd.download.progress;
 
-import br.furb.youtubesd.download.MySqlTestConfiguration;
+import br.furb.youtubesd.download.TestcontainersConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,7 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(MySqlTestConfiguration.class)
+@Import(TestcontainersConfiguration.class)
 class ProgressControllerTest {
 
     private static final String URL = "/api/download/progress/{videoId}";
