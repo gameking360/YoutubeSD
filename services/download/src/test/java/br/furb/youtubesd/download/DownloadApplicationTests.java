@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {
 		"download.instance-id=teste-1",
 		"management.health.db.enabled=false",
+		"management.health.s3.enabled=false",
 		"spring.flyway.enabled=false",
 		"spring.kafka.listener.auto-startup=false"
 })
