@@ -39,4 +39,14 @@ public class TestcontainersConfiguration {
     NewTopic videoRemovedTopic() {
         return TopicBuilder.name("video.removed").partitions(3).build();
     }
+
+    @Bean
+    NewTopic videoPublishedDlqTopic() {
+        return TopicBuilder.name("video.published.dlq").partitions(3).build();
+    }
+
+    @Bean
+    NewTopic videoRemovedDlqTopic() {
+        return TopicBuilder.name("video.removed.dlq").partitions(3).build();
+    }
 }
