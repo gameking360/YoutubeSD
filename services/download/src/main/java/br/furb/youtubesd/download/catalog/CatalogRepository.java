@@ -81,6 +81,25 @@ public class CatalogRepository {
         return lastEventAt(removal.videoId()).isPresent() ? RemovalResult.STALE : RemovalResult.NOT_FOUND;
     }
 
+    public Optional<CatalogEntry> findPublished(String videoId) {
+        return jdbc.sql("""
+                        SELECT video_id, owner_id, title, visibility, duration_sec, hls_bucket, master_key, renditions
+                        FROM video_catalog
+                        WHERE video_id = :videoId AND status = 'PUBLISHED'
+                        """)
+                .param("videoId", videoId)
+                .query((rs, row) -> new CatalogEntry(
+                        rs.getString("video_id"),
+                        rs.getString("owner_id"),
+                        rs.getString("title"),
+                        Visibility.valueOf(rs.getString("visibility")),
+                        rs.getInt("duration_sec"),
+                        rs.getString("hls_bucket"),
+                        rs.getString("master_key"),
+                        List.of(mapper.readValue(rs.getString("renditions"), Rendition[].class))))
+                .optional();
+    }
+
     public List<VideoSummary> findPublic(int offset, int limit) {
         return jdbc.sql("""
                         SELECT video_id, title, duration_sec, thumbnail_key, published_at

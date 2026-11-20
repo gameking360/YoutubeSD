@@ -34,13 +34,19 @@ public class ProgressService {
     }
 
     public PlaybackProgress get(String userId, String videoId) {
+        return find(userId, videoId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Nenhum progresso encontrado para o vídeo " + videoId));
+    }
+
+    public Optional<PlaybackProgress> find(String userId, String videoId) {
         Optional<PlaybackProgress> cached = cache.get(userId, videoId);
         if (cached.isPresent()) {
-            return cached.get();
+            return cached;
         }
 
-        PlaybackProgress stored = findInDatabase(userId, videoId);
-        cache.put(stored);
+        Optional<PlaybackProgress> stored = repository.find(userId, videoId);
+        stored.ifPresent(cache::put);
         return stored;
     }
 
