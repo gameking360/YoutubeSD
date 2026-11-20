@@ -1,24 +1,20 @@
 package br.furb.youtubesd.download.progress;
 
+import br.furb.youtubesd.download.MySqlTestConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.testcontainers.mysql.MySQLContainer;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@AutoConfigureMockMvc
+@Import(MySqlTestConfiguration.class)
 class ProgressRepositoryTest {
-
-    @ServiceConnection
-    static MySQLContainer mysql = new MySQLContainer("mysql:9.7");
-
-    static {
-        mysql.start();
-    }
 
     private static final Instant T1 = Instant.parse("2026-11-19T10:00:00.000Z");
     private static final Instant T2 = Instant.parse("2026-11-19T10:00:10.000Z");
