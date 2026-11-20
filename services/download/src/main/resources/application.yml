@@ -1,14 +1,32 @@
 spring:
   application:
     name: download
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/download_db}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:root123}
+  flyway:
+    sql-migration-prefix: ""
+    sql-migration-separator: "_"
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:root123}
+      timeout: 200ms
+      connect-timeout: 500ms
 
 server:
   port: ${PORT:8080}
 
 download:
   instance-id: ${INSTANCE_ID:local}
+  progress-cache-ttl: ${PROGRESS_CACHE_TTL:1h}
 
 management:
+  health:
+    redis:
+      enabled: false
   endpoints:
     web:
       base-path: /
@@ -16,8 +34,10 @@ management:
         include: health
   endpoint:
     health:
+      show-components: always
       probes:
         enabled: true
       group:
         liveness:
+          include: livenessState
           additional-path: "server:/alive"
