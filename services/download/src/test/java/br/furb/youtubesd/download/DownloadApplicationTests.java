@@ -16,7 +16,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {
 		"download.instance-id=teste-1",
 		"management.health.db.enabled=false",
-		"spring.flyway.enabled=false"
+		"spring.flyway.enabled=false",
+		"spring.kafka.listener.auto-startup=false"
 })
 @AutoConfigureMockMvc
 class DownloadApplicationTests {
@@ -37,6 +38,21 @@ class DownloadApplicationTests {
 				.andExpect(status().isNotFound())
 				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
 				.andExpect(jsonPath("$.status").value(404));
+	}
+
+	@Test
+	void documentacaoOpenApiListaOsEndpoints() throws Exception {
+		mockMvc.perform(get("/v3/api-docs"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.info.title").value("YoutubeSD — Download"))
+				.andExpect(jsonPath("$.paths['/api/download/progress/{videoId}'].put").exists())
+				.andExpect(jsonPath("$.paths['/api/download/progress'].get").exists());
+	}
+
+	@Test
+	void swaggerUiEstaDisponivel() throws Exception {
+		mockMvc.perform(get("/swagger-ui/index.html"))
+				.andExpect(status().isOk());
 	}
 
 }

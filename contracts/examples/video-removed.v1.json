@@ -1,0 +1,12 @@
+{
+  "messageId": "9a7e4d22-1b3c-4f5a-8e6d-2c0b9a8f7e33",
+  "correlationId": "456",
+  "type": "VideoRemoved",
+  "version": 1,
+  "occurredAt": "2026-11-20T11:00:00Z",
+  "payload": {
+    "videoId": "456",
+    "reason": "Removido pelo dono",
+    "removedAt": "2026-11-20T11:00:00Z"
+  }
+}

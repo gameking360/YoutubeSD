@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "envelope.schema.json",
+  "title": "Envelope",
+  "description": "Formato comum a todas as mensagens publicadas no Kafka.",
+  "type": "object",
+  "required": ["messageId", "correlationId", "type", "version", "occurredAt", "payload"],
+  "properties": {
+    "messageId": {
+      "description": "Identificador único da mensagem, usado na idempotência dos consumidores.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "correlationId": {
+      "description": "Identificador da saga, o mesmo do início ao fim do fluxo.",
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "description": "Nome do evento, ex.: VideoPublished.",
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "description": "Versão do formato do payload.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "occurredAt": {
+      "description": "Momento em que o fato aconteceu (UTC, ISO-8601).",
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "type": "object"
+    }
+  }
+}
