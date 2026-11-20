@@ -3,15 +3,19 @@ package br.furb.youtubesd.download.progress;
 import br.furb.youtubesd.download.error.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class ProgressService {
 
     private static final int COMPLETED_PERCENT = 95;
 
     private final ProgressRepository repository;
+    private final ProgressCache cache;
 
-    public ProgressService(ProgressRepository repository) {
+    public ProgressService(ProgressRepository repository, ProgressCache cache) {
         this.repository = repository;
+        this.cache = cache;
     }
 
     public PlaybackProgress save(String userId, String videoId, ProgressRequest request) {
@@ -22,10 +26,24 @@ public class ProgressService {
                 request.durationSec(),
                 statusOf(request.positionSec(), request.durationSec()),
                 request.clientTs()));
-        return get(userId, videoId);
+
+        PlaybackProgress stored = findInDatabase(userId, videoId);
+        cache.put(stored);
+        return stored;
     }
 
     public PlaybackProgress get(String userId, String videoId) {
+        Optional<PlaybackProgress> cached = cache.get(userId, videoId);
+        if (cached.isPresent()) {
+            return cached.get();
+        }
+
+        PlaybackProgress stored = findInDatabase(userId, videoId);
+        cache.put(stored);
+        return stored;
+    }
+
+    private PlaybackProgress findInDatabase(String userId, String videoId) {
         return repository.find(userId, videoId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Nenhum progresso encontrado para o vídeo " + videoId));

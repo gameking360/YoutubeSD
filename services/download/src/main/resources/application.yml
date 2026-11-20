@@ -21,6 +21,7 @@ server:
 
 download:
   instance-id: ${INSTANCE_ID:local}
+  progress-cache-ttl: ${PROGRESS_CACHE_TTL:1h}
 
 management:
   health:
