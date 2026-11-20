@@ -5,8 +5,7 @@ var mysqlPassword = builder.AddParameter("mysql-password", "root123", secret: tr
 
 var redis = builder.AddRedis("redis", port: 6379, password: redisPassword)
     .WithoutHttpsCertificate()
-    .WithDataVolume("youtubesd-redis-data")
-    .WithPersistence(TimeSpan.FromSeconds(10))
+    .WithContainerRuntimeArgs("--tmpfs", "/data")
     .WithLifetime(ContainerLifetime.Persistent);
 
 var kafka = builder.AddKafka("kafka", port: 9092)
