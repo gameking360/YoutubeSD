@@ -1,6 +1,8 @@
 package br.furb.youtubesd.download;
 
+import org.apache.kafka.clients.admin.NewTopic;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.testcontainers.containers.GenericContainer;
@@ -26,5 +28,15 @@ public class TestcontainersConfiguration {
     @ServiceConnection
     ConfluentKafkaContainer kafkaContainer() {
         return new ConfluentKafkaContainer("confluentinc/cp-kafka:8.2.0");
+    }
+
+    @Bean
+    NewTopic videoPublishedTopic() {
+        return TopicBuilder.name("video.published").partitions(3).build();
+    }
+
+    @Bean
+    NewTopic videoRemovedTopic() {
+        return TopicBuilder.name("video.removed").partitions(3).build();
     }
 }

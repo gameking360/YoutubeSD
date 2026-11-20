@@ -35,6 +35,9 @@ server:
 download:
   instance-id: ${INSTANCE_ID:local}
   progress-cache-ttl: ${PROGRESS_CACHE_TTL:1h}
+  topics:
+    video-published: ${KAFKA_TOPIC_VIDEO_PUBLISHED:video.published}
+    video-removed: ${KAFKA_TOPIC_VIDEO_REMOVED:video.removed}
 
 logging:
   level:
