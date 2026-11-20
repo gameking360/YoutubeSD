@@ -3,6 +3,7 @@ package br.furb.youtubesd.download.progress;
 import br.furb.youtubesd.download.error.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -41,6 +42,10 @@ public class ProgressService {
         PlaybackProgress stored = findInDatabase(userId, videoId);
         cache.put(stored);
         return stored;
+    }
+
+    public List<PlaybackProgress> list(String userId, PlaybackStatus status, int limit) {
+        return repository.findByStatus(userId, status, limit);
     }
 
     private PlaybackProgress findInDatabase(String userId, String videoId) {

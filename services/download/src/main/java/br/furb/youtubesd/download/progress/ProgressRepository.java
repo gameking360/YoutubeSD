@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -28,6 +29,14 @@ public class ProgressRepository {
             SELECT user_id, video_id, position_sec, duration_sec, status, client_ts
             FROM playback_progress
             WHERE user_id = :userId AND video_id = :videoId
+            """;
+
+    private static final String FIND_BY_STATUS = """
+            SELECT user_id, video_id, position_sec, duration_sec, status, client_ts
+            FROM playback_progress
+            WHERE user_id = :userId AND status = :status
+            ORDER BY client_ts DESC
+            LIMIT :limit
             """;
 
     private final JdbcClient jdbc;
@@ -53,6 +62,15 @@ public class ProgressRepository {
                 .param("videoId", videoId)
                 .query(this::map)
                 .optional();
+    }
+
+    public List<PlaybackProgress> findByStatus(String userId, PlaybackStatus status, int limit) {
+        return jdbc.sql(FIND_BY_STATUS)
+                .param("userId", userId)
+                .param("status", status.name())
+                .param("limit", limit)
+                .query(this::map)
+                .list();
     }
 
     private PlaybackProgress map(ResultSet rs, int row) throws SQLException {
