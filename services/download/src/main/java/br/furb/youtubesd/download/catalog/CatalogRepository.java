@@ -63,6 +63,23 @@ public class CatalogRepository {
                 .orElse(false);
     }
 
+    public RemovalResult markRemoved(VideoRemovedPayload removal, Instant occurredAt) {
+        int updated = jdbc.sql("""
+                        UPDATE video_catalog
+                        SET status = 'REMOVED', removed_at = :removedAt, last_event_at = :occurredAt
+                        WHERE video_id = :videoId AND last_event_at < :occurredAt
+                        """)
+                .param("videoId", removal.videoId())
+                .param("removedAt", toDatabase(removal.removedAt()))
+                .param("occurredAt", toDatabase(occurredAt))
+                .update();
+
+        if (updated > 0) {
+            return RemovalResult.APPLIED;
+        }
+        return lastEventAt(removal.videoId()).isPresent() ? RemovalResult.STALE : RemovalResult.NOT_FOUND;
+    }
+
     private Optional<Instant> lastEventAt(String videoId) {
         return jdbc.sql("SELECT last_event_at FROM video_catalog WHERE video_id = :videoId")
                 .param("videoId", videoId)

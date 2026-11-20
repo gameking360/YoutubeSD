@@ -20,4 +20,9 @@ public class VideoEventsConsumer {
     public void onVideoPublished(ConsumerRecord<String, String> record) {
         service.applyPublished(parser.parse(record.value(), "VideoPublished", 1, VideoPublishedPayload.class));
     }
+
+    @KafkaListener(topics = "${download.topics.video-removed}")
+    public void onVideoRemoved(ConsumerRecord<String, String> record) {
+        service.applyRemoved(parser.parse(record.value(), "VideoRemoved", 1, VideoRemovedPayload.class));
+    }
 }

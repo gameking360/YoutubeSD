@@ -30,9 +30,7 @@ public class CatalogService {
         MessageEnvelope envelope = message.envelope();
         VideoPublishedPayload video = message.payload();
 
-        if (!processedMessages.register(envelope)) {
-            log.info("Mensagem duplicada ignorada: type={} messageId={} correlationId={} instancia={}",
-                    envelope.type(), envelope.messageId(), envelope.correlationId(), instanceId);
+        if (isDuplicate(envelope)) {
             return;
         }
 
@@ -41,5 +39,34 @@ public class CatalogService {
         log.info("{}: videoId={} messageId={} correlationId={} instancia={}",
                 applied ? "VideoPublished aplicado" : "VideoPublished desatualizado ignorado",
                 video.videoId(), envelope.messageId(), envelope.correlationId(), instanceId);
+    }
+
+    @Transactional
+    public void applyRemoved(ParsedMessage<VideoRemovedPayload> message) {
+        MessageEnvelope envelope = message.envelope();
+        VideoRemovedPayload removal = message.payload();
+
+        if (isDuplicate(envelope)) {
+            return;
+        }
+
+        RemovalResult result = catalog.markRemoved(removal, envelope.occurredAt());
+
+        log.info("{}: videoId={} messageId={} correlationId={} instancia={}",
+                switch (result) {
+                    case APPLIED -> "VideoRemoved aplicado";
+                    case STALE -> "VideoRemoved desatualizado ignorado";
+                    case NOT_FOUND -> "VideoRemoved de video inexistente ignorado";
+                },
+                removal.videoId(), envelope.messageId(), envelope.correlationId(), instanceId);
+    }
+
+    private boolean isDuplicate(MessageEnvelope envelope) {
+        if (processedMessages.register(envelope)) {
+            return false;
+        }
+        log.info("Mensagem duplicada ignorada: type={} messageId={} correlationId={} instancia={}",
+                envelope.type(), envelope.messageId(), envelope.correlationId(), instanceId);
+        return true;
     }
 }
