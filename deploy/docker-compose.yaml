@@ -1,0 +1,304 @@
+services:
+  compose-dashboard:
+    image: "mcr.microsoft.com/dotnet/nightly/aspire-dashboard:13.6"
+    ports:
+      - "18888:18888"
+    expose:
+      - "18889"
+      - "18890"
+    networks:
+      - "aspire"
+    restart: "always"
+  redis:
+    image: "docker.io/library/redis:8.6"
+    command:
+      - "-c"
+      - "redis-server --requirepass $$REDIS_PASSWORD"
+    entrypoint:
+      - "/bin/sh"
+    environment:
+      REDIS_PASSWORD: "root123"
+    expose:
+      - "6379"
+    networks:
+      - "aspire"
+    tmpfs:
+      - "/data"
+  kafka:
+    image: "docker.io/confluentinc/confluent-local:8.2.0"
+    environment:
+      KAFKA_LISTENERS: "PLAINTEXT://localhost:29092,CONTROLLER://localhost:29093,PLAINTEXT_HOST://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:9093"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:29092,PLAINTEXT_HOST://kafka:9092,PLAINTEXT_INTERNAL://kafka:9093"
+      KAFKA_LOG_DIRS: "/var/lib/kafka/data"
+    expose:
+      - "9092"
+      - "9093"
+    volumes:
+      - type: "volume"
+        target: "/var/lib/kafka/data"
+        source: "youtubesd-kafka-data"
+        read_only: false
+    networks:
+      - "aspire"
+  kafka-init:
+    image: "confluentinc/confluent-local:8.2.0"
+    command:
+      - "/scripts/create-topics.sh"
+    entrypoint:
+      - "/bin/bash"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9093"
+    volumes:
+      - type: "bind"
+        target: "/scripts"
+        source: "../infra/kafka"
+        read_only: true
+    depends_on:
+      kafka:
+        condition: "service_started"
+    networks:
+      - "aspire"
+  mysql:
+    image: "docker.io/library/mysql:9.7"
+    environment:
+      MYSQL_ROOT_PASSWORD: "root123"
+      MYSQL_DATABASE: "download_db"
+    expose:
+      - "3306"
+    volumes:
+      - type: "volume"
+        target: "/var/lib/mysql"
+        source: "youtubesd-mysql-data"
+        read_only: false
+    networks:
+      - "aspire"
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"
+      interval: "5s"
+      timeout: "3s"
+      retries: 20
+      start_period: "10s"
+  ministack:
+    image: "ministackorg/ministack:1.5.43"
+    environment:
+      S3_PERSIST: "1"
+      S3_DATA_DIR: "/data/s3"
+      PERSIST_STATE: "1"
+      STATE_DIR: "/data/state"
+    expose:
+      - "4566"
+    volumes:
+      - type: "volume"
+        target: "/data"
+        source: "youtubesd-ministack-data"
+        read_only: false
+      - type: "bind"
+        target: "/etc/localstack/init/ready.d"
+        source: "../infra/ministack/ready.d"
+        read_only: true
+    networks:
+      - "aspire"
+  uploadservice:
+    image: "youtubesd-upload:latest"
+    build:
+      context: ".."
+      dockerfile: "deploy/dotnet.Dockerfile"
+      args:
+        PROJECT: "services/upload/upload/upload/upload.csproj"
+    command:
+      - "upload.dll"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      HTTP_PORTS: "8080"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://compose-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "uploadService"
+      ASPNETCORE_ENVIRONMENT: "Development"
+    expose:
+      - "8080"
+    networks:
+      - "aspire"
+    restart: "on-failure"
+  gateway:
+    image: "youtubesd-gateway:latest"
+    build:
+      context: ".."
+      dockerfile: "deploy/dotnet.Dockerfile"
+      args:
+        PROJECT: "Orchestrador/YoutubeOrchestrador/YoutubeOrchestrador.Gateway/YoutubeOrchestrador.Gateway.csproj"
+    command:
+      - "YoutubeOrchestrador.Gateway.dll"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      HTTP_PORTS: "8080"
+      UPLOADSERVICE_HTTP: "http://uploadService:8080"
+      services__uploadService__http__0: "http://uploadService:8080"
+      UPLOADSERVICE_HTTPS: "https://uploadService:8080"
+      DOWNLOAD_1_HTTP: "http://download-1:8080"
+      services__download-1__http__0: "http://download-1:8080"
+      ReverseProxy__Clusters__download__Destinations__download-1__Address: "http://download-1"
+      DOWNLOAD_2_HTTP: "http://download-2:8080"
+      services__download-2__http__0: "http://download-2:8080"
+      ReverseProxy__Clusters__download__Destinations__download-2__Address: "http://download-2"
+      DOWNLOAD_3_HTTP: "http://download-3:8080"
+      services__download-3__http__0: "http://download-3:8080"
+      ReverseProxy__Clusters__download__Destinations__download-3__Address: "http://download-3"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://compose-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "gateway"
+      ASPNETCORE_ENVIRONMENT: "Development"
+    ports:
+      - "8080:8080"
+    expose:
+      - "8080"
+    depends_on:
+      uploadservice:
+        condition: "service_started"
+      download-1:
+        condition: "service_started"
+      download-2:
+        condition: "service_started"
+      download-3:
+        condition: "service_started"
+    networks:
+      - "aspire"
+    restart: "on-failure"
+  download-1:
+    image: "youtubesd-download:latest"
+    build:
+      context: "../services/download"
+    environment:
+      INSTANCE_ID: "download-1"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/download_db"
+      SPRING_DATASOURCE_USERNAME: "root"
+      SPRING_DATASOURCE_PASSWORD: "root123"
+      SPRING_DATA_REDIS_HOST: "redis"
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_DATA_REDIS_PASSWORD: "root123"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9093"
+      AWS_ENDPOINT_URL: "http://ministack:4566"
+      AWS_REGION: "us-east-1"
+      AWS_ACCESS_KEY_ID: "test"
+      AWS_SECRET_ACCESS_KEY: "test"
+      AUTH_MODE: "header"
+    ports:
+      - "8401:8080"
+    expose:
+      - "8080"
+    depends_on:
+      redis:
+        condition: "service_started"
+      mysql:
+        condition: "service_healthy"
+      kafka-init:
+        condition: "service_completed_successfully"
+      ministack:
+        condition: "service_started"
+    networks:
+      - "aspire"
+    restart: "on-failure"
+    deploy:
+      resources:
+        limits:
+          memory: "768M"
+  download-2:
+    image: "youtubesd-download:latest"
+    pull_policy: "never"
+    environment:
+      INSTANCE_ID: "download-2"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/download_db"
+      SPRING_DATASOURCE_USERNAME: "root"
+      SPRING_DATASOURCE_PASSWORD: "root123"
+      SPRING_DATA_REDIS_HOST: "redis"
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_DATA_REDIS_PASSWORD: "root123"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9093"
+      AWS_ENDPOINT_URL: "http://ministack:4566"
+      AWS_REGION: "us-east-1"
+      AWS_ACCESS_KEY_ID: "test"
+      AWS_SECRET_ACCESS_KEY: "test"
+      AUTH_MODE: "header"
+    ports:
+      - "8402:8080"
+    expose:
+      - "8080"
+    depends_on:
+      redis:
+        condition: "service_started"
+      mysql:
+        condition: "service_healthy"
+      kafka-init:
+        condition: "service_completed_successfully"
+      ministack:
+        condition: "service_started"
+    networks:
+      - "aspire"
+    restart: "on-failure"
+    deploy:
+      resources:
+        limits:
+          memory: "768M"
+  download-3:
+    image: "youtubesd-download:latest"
+    pull_policy: "never"
+    environment:
+      INSTANCE_ID: "download-3"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/download_db"
+      SPRING_DATASOURCE_USERNAME: "root"
+      SPRING_DATASOURCE_PASSWORD: "root123"
+      SPRING_DATA_REDIS_HOST: "redis"
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_DATA_REDIS_PASSWORD: "root123"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9093"
+      AWS_ENDPOINT_URL: "http://ministack:4566"
+      AWS_REGION: "us-east-1"
+      AWS_ACCESS_KEY_ID: "test"
+      AWS_SECRET_ACCESS_KEY: "test"
+      AUTH_MODE: "header"
+    ports:
+      - "8403:8080"
+    expose:
+      - "8080"
+    depends_on:
+      redis:
+        condition: "service_started"
+      mysql:
+        condition: "service_healthy"
+      kafka-init:
+        condition: "service_completed_successfully"
+      ministack:
+        condition: "service_started"
+    networks:
+      - "aspire"
+    restart: "on-failure"
+    deploy:
+      resources:
+        limits:
+          memory: "768M"
+  kafka-ui:
+    image: "docker.io/kafbat/kafka-ui:v1.5.0"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: "kafka"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:9093"
+    ports:
+      - "8090:8080"
+    depends_on:
+      kafka:
+        condition: "service_started"
+    networks:
+      - "aspire"
+networks:
+  aspire:
+    driver: "bridge"
+volumes:
+  youtubesd-kafka-data:
+    driver: "local"
+  youtubesd-mysql-data:
+    driver: "local"
+  youtubesd-ministack-data:
+    driver: "local"

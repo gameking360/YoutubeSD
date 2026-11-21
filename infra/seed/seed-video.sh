@@ -15,8 +15,11 @@ FFMPEG_IMAGE="jrottenberg/ffmpeg:9.0-ubuntu"
 WORK="seed-ffmpeg-$VIDEO_ID"
 PROBE="seed-ffprobe-$VIDEO_ID"
 
+# Funciona no Aspire (nome "kafka-<sufixo>") e no Docker Compose (etiqueta com.docker.compose.service).
 find_container() {
-  docker ps --format '{{.Names}}' | grep -E "^$1-" | grep -v ui | head -1 || true
+  docker ps --format '{{.Names}}	{{.Label "com.docker.compose.service"}}' | awk -F'\t' -v s="$1" '
+    $2 == s { print $1; exit }
+    $2 == "" && index($1, s "-") == 1 && $1 !~ /-ui-/ { print $1; exit }' || true
 }
 
 even() {
