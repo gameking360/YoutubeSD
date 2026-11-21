@@ -1,5 +1,11 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
+var downloadReplicas = int.TryParse(builder.Configuration["DownloadReplicas"], out var replicas) ? replicas : 3;
+
+builder.AddDockerComposeEnvironment("compose")
+    .WithDashboard(dashboard => dashboard.WithHostPort(18888))
+    .ConfigureComposeFile(file => ComposeAjustes.Arquivo(file, downloadReplicas));
+
 var redisPassword = builder.AddParameter("redis-password", "root123", secret: true);
 var mysqlPassword = builder.AddParameter("mysql-password", "root123", secret: true);
 
@@ -46,8 +52,6 @@ var gateway = builder.AddProject<Projects.YoutubeOrchestrador_Gateway>("gateway"
     .WithHttpHealthCheck("/health")
     .WithReference(upload)
     .WaitFor(upload);
-
-var downloadReplicas = int.TryParse(builder.Configuration["DownloadReplicas"], out var replicas) ? replicas : 3;
 
 for (var i = 1; i <= downloadReplicas; i++)
 {
