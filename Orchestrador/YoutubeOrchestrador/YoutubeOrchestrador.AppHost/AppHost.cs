@@ -42,32 +42,43 @@ var ministack = builder.AddContainer("ministack", "ministackorg/ministack", "1.5
 var upload = builder.AddProject<Projects.upload>("uploadService")
     .WithHttpHealthCheck("/health");
 
-var download = builder.AddDockerfile("downloadService", "../../../services/download")
-    .WithHttpEndpoint(port: 8401, targetPort: 8080)
+var gateway = builder.AddProject<Projects.YoutubeOrchestrador_Gateway>("gateway")
     .WithHttpHealthCheck("/health")
-    .WithEnvironment("INSTANCE_ID", "download-1")
-    .WithEnvironment("SPRING_DATASOURCE_URL", "jdbc:mysql://mysql:3306/download_db")
-    .WithEnvironment("SPRING_DATASOURCE_USERNAME", "root")
-    .WithEnvironment("SPRING_DATASOURCE_PASSWORD", mysqlPassword)
-    .WithEnvironment("SPRING_DATA_REDIS_HOST", "redis")
-    .WithEnvironment("SPRING_DATA_REDIS_PORT", "6379")
-    .WithEnvironment("SPRING_DATA_REDIS_PASSWORD", redisPassword)
-    .WithEnvironment("SPRING_KAFKA_BOOTSTRAP_SERVERS", "kafka:9093")
-    .WithEnvironment("AWS_ENDPOINT_URL", "http://ministack:4566")
-    .WithEnvironment("AWS_REGION", "us-east-1")
-    .WithEnvironment("AWS_ACCESS_KEY_ID", "test")
-    .WithEnvironment("AWS_SECRET_ACCESS_KEY", "test")
-    .WithEnvironment("AUTH_MODE", "header")
-    .WaitFor(redis)
-    .WaitFor(downloadDb)
-    .WaitForCompletion(kafkaInit)
-    .WaitFor(ministack);
-
-builder.AddProject<Projects.YoutubeOrchestrador_Gateway>("gateway")
-    .WithHttpHealthCheck("/health")
-    .WithReference(download.GetEndpoint("http"))
     .WithReference(upload)
-    .WaitFor(download)
     .WaitFor(upload);
+
+var downloadReplicas = int.TryParse(builder.Configuration["DownloadReplicas"], out var replicas) ? replicas : 3;
+
+for (var i = 1; i <= downloadReplicas; i++)
+{
+    var name = $"download-{i}";
+
+    var download = builder.AddDockerfile(name, "../../../services/download")
+        .WithHttpEndpoint(port: 8400 + i, targetPort: 8080)
+        .WithHttpHealthCheck("/health")
+        .WithContainerRuntimeArgs("--memory", "768m")
+        .WithEnvironment("INSTANCE_ID", name)
+        .WithEnvironment("SPRING_DATASOURCE_URL", "jdbc:mysql://mysql:3306/download_db")
+        .WithEnvironment("SPRING_DATASOURCE_USERNAME", "root")
+        .WithEnvironment("SPRING_DATASOURCE_PASSWORD", mysqlPassword)
+        .WithEnvironment("SPRING_DATA_REDIS_HOST", "redis")
+        .WithEnvironment("SPRING_DATA_REDIS_PORT", "6379")
+        .WithEnvironment("SPRING_DATA_REDIS_PASSWORD", redisPassword)
+        .WithEnvironment("SPRING_KAFKA_BOOTSTRAP_SERVERS", "kafka:9093")
+        .WithEnvironment("AWS_ENDPOINT_URL", "http://ministack:4566")
+        .WithEnvironment("AWS_REGION", "us-east-1")
+        .WithEnvironment("AWS_ACCESS_KEY_ID", "test")
+        .WithEnvironment("AWS_SECRET_ACCESS_KEY", "test")
+        .WithEnvironment("AUTH_MODE", "header")
+        .WaitFor(redis)
+        .WaitFor(downloadDb)
+        .WaitForCompletion(kafkaInit)
+        .WaitFor(ministack);
+
+    gateway
+        .WithReference(download.GetEndpoint("http"))
+        .WithEnvironment($"ReverseProxy__Clusters__download__Destinations__{name}__Address", $"http://{name}")
+        .WaitFor(download);
+}
 
 builder.Build().Run();
