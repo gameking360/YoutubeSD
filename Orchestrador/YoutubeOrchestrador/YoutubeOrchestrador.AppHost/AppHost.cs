@@ -39,10 +39,10 @@ var ministack = builder.AddContainer("ministack", "ministackorg/ministack", "1.5
     .WithHttpHealthCheck("/_ministack/health")
     .WithLifetime(ContainerLifetime.Persistent);
 
-builder.AddProject<Projects.upload>("uploadService")
+var upload = builder.AddProject<Projects.upload>("uploadService")
     .WithHttpHealthCheck("/health");
 
-builder.AddDockerfile("downloadService", "../../../services/download")
+var download = builder.AddDockerfile("downloadService", "../../../services/download")
     .WithHttpEndpoint(port: 8401, targetPort: 8080)
     .WithHttpHealthCheck("/health")
     .WithEnvironment("INSTANCE_ID", "download-1")
@@ -62,5 +62,12 @@ builder.AddDockerfile("downloadService", "../../../services/download")
     .WaitFor(downloadDb)
     .WaitForCompletion(kafkaInit)
     .WaitFor(ministack);
+
+builder.AddProject<Projects.YoutubeOrchestrador_Gateway>("gateway")
+    .WithHttpHealthCheck("/health")
+    .WithReference(download.GetEndpoint("http"))
+    .WithReference(upload)
+    .WaitFor(download)
+    .WaitFor(upload);
 
 builder.Build().Run();
