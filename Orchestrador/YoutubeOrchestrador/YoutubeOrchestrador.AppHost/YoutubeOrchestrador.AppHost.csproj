@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\services\upload\upload\upload\upload.csproj" />
+    <ProjectReference Include="..\YoutubeOrchestrador.Gateway\YoutubeOrchestrador.Gateway.csproj" />
   </ItemGroup>
 
 </Project>
