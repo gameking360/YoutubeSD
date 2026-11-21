@@ -2,6 +2,7 @@ package br.furb.youtubesd.download.playback;
 
 import br.furb.youtubesd.download.catalog.CatalogEntry;
 import br.furb.youtubesd.download.error.ResourceNotFoundException;
+import br.furb.youtubesd.download.security.CurrentUser;
 import br.furb.youtubesd.download.storage.HlsStorage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,23 +32,25 @@ public class HlsController {
 
     private final PlaybackService playback;
     private final HlsStorage storage;
+    private final CurrentUser currentUser;
 
-    public HlsController(PlaybackService playback, HlsStorage storage) {
+    public HlsController(PlaybackService playback, HlsStorage storage, CurrentUser currentUser) {
         this.playback = playback;
         this.storage = storage;
+        this.currentUser = currentUser;
     }
 
     @GetMapping("/master.m3u8")
     @Operation(summary = "Playlist mestre HLS", description = "Lista as resoluções disponíveis. Entregue ao player como fonte do vídeo.")
     public ResponseEntity<byte[]> master(@PathVariable String videoId) {
-        CatalogEntry video = playback.publishedVideo(videoId);
+        CatalogEntry video = playback.accessibleVideo(videoId, currentUser.id());
         return manifest(storage.read(video.hlsBucket(), video.hlsPrefix() + "master.m3u8"));
     }
 
     @GetMapping("/{rendition}/index.m3u8")
     @Operation(summary = "Playlist de uma resolução", description = "Lista os segmentos da resolução. O player pede sozinho.")
     public ResponseEntity<byte[]> rendition(@PathVariable String videoId, @PathVariable String rendition) {
-        CatalogEntry video = playback.publishedVideo(videoId);
+        CatalogEntry video = playback.accessibleVideo(videoId, currentUser.id());
         requireRendition(video, rendition);
         return manifest(storage.read(video.hlsBucket(), video.hlsPrefix() + rendition + "/index.m3u8"));
     }
@@ -57,7 +60,7 @@ public class HlsController {
     public ResponseEntity<StreamingResponseBody> segment(@PathVariable String videoId,
                                                          @PathVariable String rendition,
                                                          @PathVariable String segment) {
-        CatalogEntry video = playback.publishedVideo(videoId);
+        CatalogEntry video = playback.accessibleVideo(videoId, currentUser.id());
         requireRendition(video, rendition);
         if (!SEGMENT_NAME.matcher(segment).matches()) {
             throw new ResourceNotFoundException("Segmento inválido: " + segment);

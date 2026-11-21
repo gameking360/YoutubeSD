@@ -64,11 +64,11 @@ class ProgressControllerTest {
     }
 
     @Test
-    void semUsuarioRetorna400() throws Exception {
+    void semUsuarioRetorna401() throws Exception {
         mockMvc.perform(put(URL, "v1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body(10, 600, "2026-11-19T10:00:00Z")))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
     }
 
