@@ -2,7 +2,7 @@
   <Project Path="../../services/security/src/Security.csproj" />
   <Project Path="../../services/security/tests/Security.Tests.csproj" />
   <Project Path="../../services/identity/identity/identity/identity.csproj" />
-  <Project Path="../../tools/SecuritySetup/SecuritySetup.csproj" />
+  <Project Path="../../services/security/tools/SecuritySetup/SecuritySetup.csproj" />
   <Project Path="../../services/upload/upload/upload/upload.csproj" />
   <Project Path="YoutubeOrchestrador.AppHost/YoutubeOrchestrador.AppHost.csproj" />
   <Project Path="YoutubeOrchestrador.Gateway/YoutubeOrchestrador.Gateway.csproj" />

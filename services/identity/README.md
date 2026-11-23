@@ -103,7 +103,7 @@ O schema é criado no start (`Data/Schema.sql`, `CREATE TABLE IF NOT EXISTS`). S
 Com o Docker Desktop aberto, na raiz do repositório:
 
 ```
-dotnet run --project tools/SecuritySetup
+dotnet run --project services/security/tools/SecuritySetup
 cd Orchestrador/YoutubeOrchestrador/YoutubeOrchestrador.AppHost
 dotnet run --launch-profile http
 ```

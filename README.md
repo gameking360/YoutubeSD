@@ -36,7 +36,7 @@ deploy/       Docker Compose gerado a partir do AppHost
 Na raiz do repositório, prepare uma vez a chave RSA e os segredos locais:
 
 ```
-dotnet run --project tools/SecuritySetup
+dotnet run --project services/security/tools/SecuritySetup
 ```
 
 O comando preserva valores existentes em `.secrets/security.json` e `deploy/.env`, ambos ignorados pelo Git. Não remova esses arquivos entre reinícios: todas as réplicas precisam compartilhar a mesma chave.

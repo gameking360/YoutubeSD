@@ -7,7 +7,7 @@ Serviço de autenticação do YoutubeSD, em ASP.NET Core / .NET 10. O Identity m
 Na raiz do repositório, com Docker Desktop aberto:
 
 ```sh
-dotnet run --project tools/SecuritySetup
+dotnet run --project services/security/tools/SecuritySetup
 cd Orchestrador/YoutubeOrchestrador/YoutubeOrchestrador.AppHost
 dotnet run --launch-profile http
 ```
@@ -15,6 +15,8 @@ dotnet run --launch-profile http
 Ou, depois da preparação, `docker compose up --build -d` em `deploy/`.
 
 O utilitário gera uma chave RSA de 3072 bits e segredos locais em `.secrets/security.json` e `deploy/.env` (ignorados pelo Git e pelos builds Docker). Executá-lo novamente preserva os valores. Todas as réplicas recebem a mesma chave via configuração. Não apague esses arquivos ao reiniciar: substituir a chave invalida tokens já emitidos.
+
+O `SecuritySetup` é uma ferramenta de preparação do ambiente local. Sua execução é manual e ele não é incluído na publicação da API nem executado na inicialização do serviço. Em produção, a chave de assinatura e os segredos devem ser provisionados pela infraestrutura e fornecidos pelas configurações documentadas abaixo, compartilhando a mesma chave entre as réplicas. O serviço exige esses valores e não gera uma chave automaticamente.
 
 ## API pelo gateway
 
