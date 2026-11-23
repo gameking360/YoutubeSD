@@ -16,6 +16,8 @@ static class ComposeAjustes
         ["${REDIS_PASSWORD}"] = "root123",
         ["${GATEWAY_PORT}"] = "8080",
         ["${UPLOADSERVICE_PORT}"] = "8080",
+        ["${SECURITYSERVICE_PORT}"] = "8080",
+        ["${IDENTITYSERVICE_PORT}"] = "8080",
         ["${KAFKA_INIT_BINDMOUNT_0}"] = "../infra/kafka",
         ["${MINISTACK_BINDMOUNT_0}"] = "../infra/ministack/ready.d",
     };
@@ -63,6 +65,19 @@ static class ComposeAjustes
         DotnetService(services["uploadservice"], "youtubesd-upload",
             "services/upload/upload/upload/upload.csproj",
             "upload.dll");
+
+        DotnetService(services["identityservice"], "youtubesd-identity",
+            "services/identity/identity/identity/identity.csproj", "identity.dll");
+        services["identityservice"].DependsOn["mysql"].Condition = "service_healthy";
+        DotnetService(services["securityservice"], "youtubesd-security",
+            "services/security/src/Security.csproj", "Security.dll");
+        services["securityservice"].DependsOn["mysql"].Condition = "service_healthy";
+
+        // Compose service names are lowercase; keep logical .NET discovery names through services__ entries.
+        foreach (var name in new[] { "identityservice", "uploadservice" })
+            services[name].Environment["Jwt__JwksUri"] = "http://securityservice:8080/api/auth/.well-known/jwks.json";
+        foreach (var name in services.Keys.Where(n => n.StartsWith("download-")))
+            services[name].Environment["JWT_JWKS_URI"] = "http://securityservice:8080/api/auth/.well-known/jwks.json";
 
         var kafkaUi = new Service { Name = "kafka-ui", Image = "docker.io/kafbat/kafka-ui:v1.5.0" };
         kafkaUi.Environment["KAFKA_CLUSTERS_0_NAME"] = "kafka";

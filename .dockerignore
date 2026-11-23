@@ -1,0 +1,10 @@
+.git
+.secrets
+**/.env
+**/*.pem
+**/*.key
+**/*.pfx
+**/bin
+**/obj
+**/target
+**/node_modules

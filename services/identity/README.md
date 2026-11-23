@@ -17,14 +17,15 @@ Prefixo mantido pelo serviço: `/api/identity`. O gateway encaminha `/api/identi
 | Método | Rota | Descrição |
 |---|---|---|
 | POST | `/api/identity/users` | Cadastro: `{ "name", "email", "password" }` |
-| GET | `/api/identity/users/{id}` | Perfil do usuário |
-| GET | `/api/identity/users/me` | Perfil do usuário do header `X-User-Id` |
+| GET | `/api/identity/users/{id}` | Perfil do próprio usuário ou consulta por ADMIN; exige JWT |
+| GET | `/api/identity/users/me` | Perfil do usuário autenticado pelo `sub` do JWT |
 | PUT | `/api/identity/users/me` | Atualiza o nome: `{ "name" }` |
 | GET | `/api/identity/quota/me` | Cota do usuário: `{ limit, used, reserved, available }` |
 | POST | `/api/identity/internal/authenticate` | `{ "email", "password" }` → dados do usuário; usado pelo Security |
+| GET | `/api/identity/internal/users/{id}/authentication` | ID e papel atuais para a renovação de sessão; exige chave interna |
 | POST | `/api/identity/admin/users/{id}/quota/reset` | Zera `used`/`reserved` e as reservas (demonstração F5) |
 
-`X-User-Id` é o mesmo header usado pelo Download enquanto o Security não entra. A validação local do JWT (JWKS) fica para a integração com o Security; o código já lê a claim `sub` se ela estiver disponível no `HttpContext`. Os endpoints `internal` e `admin` podem ser protegidos por `Identity:InternalApiKey` e `Identity:AdminToken`; sem essas variáveis, ficam abertos (adequado só ao protótipo).
+Perfil e cota pessoais exigem JWT RS256 validado localmente pelo JWKS do Security (assinatura, emissor, audiência e expiração). A identidade vem exclusivamente da claim `sub`; `X-User-Id` é ignorado. O cadastro é público. As rotas `internal` e `admin` exigem respectivamente `Identity:InternalApiKey` / `X-Internal-Key` e `Identity:AdminToken` / `X-Admin-Token`; sem configuração, o acesso é negado. O gateway bloqueia `/api/identity/internal/**`.
 
 ## Eventos
 
@@ -90,8 +91,11 @@ O schema é criado no start (`Data/Schema.sql`, `CREATE TABLE IF NOT EXISTS`). S
 | `Kafka__MaxAttempts` | `3` | tentativas antes da DLQ |
 | `Kafka__Topics__*` | nomes do `appsettings.json` | tópicos |
 | `Identity__DefaultQuotaLimit` | `10` | vagas por usuário |
-| `Identity__AdminToken` | vazio | protege o reset de cota |
-| `Identity__InternalApiKey` | vazio | protege a validação de credenciais |
+| `Identity__AdminToken` | vazio (acesso negado) | protege o reset de cota |
+| `Identity__InternalApiKey` | vazio (acesso negado) | protege APIs internas |
+| `Jwt__JwksUri` | endereço do Security | chaves públicas, com cache |
+| `Jwt__Issuer` | `youtubesd-security` | emissor aceito |
+| `Jwt__Audience` | `youtubesd-api` | audiência aceita |
 | `INSTANCE_ID` | nome da máquina | identificação nos logs |
 
 ## Como rodar
@@ -99,6 +103,7 @@ O schema é criado no start (`Data/Schema.sql`, `CREATE TABLE IF NOT EXISTS`). S
 Com o Docker Desktop aberto, na raiz do repositório:
 
 ```
+dotnet run --project tools/SecuritySetup
 cd Orchestrador/YoutubeOrchestrador/YoutubeOrchestrador.AppHost
 dotnet run --launch-profile http
 ```
@@ -127,11 +132,13 @@ Com o ambiente no ar e o Identity consumindo o Kafka:
 ./services/identity/scripts/f5-cota.sh
 ```
 
+Antes, configure `IDENTITY_ADMIN_TOKEN` com o valor de `deploy/.env`. O script verifica o retorno do reset protegido antes de publicar as mensagens.
+
 O script cria um usuário, publica 100 pedidos de reserva e confere no banco 10 reservas ativas e 90 rejeições.
 
 ## Dependências de outras partes
 
 - **Upload**: precisa publicar `quota.reserve-requested` e `quota.release-requested` no formato dos contratos acima e consumir `quota.reserved`/`quota.rejected`. Hoje o Upload ainda é o projeto vazio; até lá o script F5 publica as mensagens manualmente.
-- **Security**: deve chamar `POST /api/identity/internal/authenticate` para validar e-mail/senha e emitir o JWT com `sub` = `users.id`. O endpoint de login continua sendo do Security.
+- **Security**: chama `POST /api/identity/internal/authenticate` para validar e-mail/senha e emite JWT com `sub` = `users.id`; consulta o contexto interno por ID a cada refresh. O login é do Security.
 - **Gateway**: rota `/api/identity/**` já configurada em `YoutubeOrchestrador.Gateway/appsettings.json`.
-- **Compose**: o `deploy/docker-compose.yaml` precisa ser regerado a partir do AppHost para incluir o Identity.
+- **Compose**: gerado pelo AppHost, inclui Identity e Security. Execute a preparação das chaves antes de subir.

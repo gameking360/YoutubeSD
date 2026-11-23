@@ -39,6 +39,8 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: ${JWT_JWKS_URI:http://localhost:8080/api/auth/.well-known/jwks.json}
+          issuer-uri: ${JWT_ISSUER:youtubesd-security}
+          audiences: ${JWT_AUDIENCE:youtubesd-api}
 
 server:
   port: ${PORT:8080}

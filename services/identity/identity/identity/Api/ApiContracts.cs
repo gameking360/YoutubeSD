@@ -5,6 +5,7 @@ public sealed record RegisterRequest(string? Name, string? Email, string? Passwo
 public sealed record UpdateProfileRequest(string? Name);
 
 public sealed record AuthenticateRequest(string? Email, string? Password);
+public sealed record AuthenticationContextResponse(string UserId, string Role);
 
 public sealed record QuotaResponse(int Limit, int Used, int Reserved, int Available);
 
