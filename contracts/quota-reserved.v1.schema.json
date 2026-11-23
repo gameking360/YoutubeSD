@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quota-reserved.v1.schema.json",
+  "title": "QuotaReserved v1",
+  "description": "Publicado pelo Identity no tópico quota.reserved quando uma vaga da cota do usuário é reservada. Chave da mensagem: videoId.",
+  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "QuotaReserved" },
+    "version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["reservationId", "videoId", "ownerId", "quotaLimit", "quotaUsed", "quotaReserved", "quotaAvailable"],
+      "properties": {
+        "reservationId": { "type": "string", "format": "uuid" },
+        "videoId": { "type": "string", "minLength": 1 },
+        "ownerId": { "type": "string", "minLength": 1 },
+        "quotaLimit": { "type": "integer", "minimum": 1 },
+        "quotaUsed": { "type": "integer", "minimum": 0 },
+        "quotaReserved": { "type": "integer", "minimum": 0 },
+        "quotaAvailable": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

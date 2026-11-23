@@ -33,6 +33,7 @@ var mysql = builder.AddMySql("mysql", password: mysqlPassword, port: 3306)
     .WithLifetime(ContainerLifetime.Persistent);
 
 var downloadDb = mysql.AddDatabase("downloadDb", "download_db");
+var identityDb = mysql.AddDatabase("identityDb", "identity_db");
 
 var ministack = builder.AddContainer("ministack", "ministackorg/ministack", "1.5.43")
     .WithHttpEndpoint(port: 4566, targetPort: 4566)
@@ -48,10 +49,18 @@ var ministack = builder.AddContainer("ministack", "ministackorg/ministack", "1.5
 var upload = builder.AddProject<Projects.upload>("uploadService")
     .WithHttpHealthCheck("/health");
 
+var identity = builder.AddProject<Projects.identity>("identityService")
+    .WithHttpHealthCheck("/health")
+    .WithReference(identityDb).WaitFor(identityDb)
+    .WithReference(kafka).WaitFor(kafka)
+    .WaitForCompletion(kafkaInit);
+
 var gateway = builder.AddProject<Projects.YoutubeOrchestrador_Gateway>("gateway")
     .WithHttpHealthCheck("/health")
     .WithReference(upload)
-    .WaitFor(upload);
+    .WaitFor(upload)
+    .WithReference(identity)
+    .WaitFor(identity);
 
 for (var i = 1; i <= downloadReplicas; i++)
 {

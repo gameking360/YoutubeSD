@@ -1,34 +1,52 @@
+using Confluent.Kafka;
+using identity.Api;
+using identity.Configuration;
+using identity.Data;
+using identity.Messaging;
+using identity.Observability;
+using identity.Services;
 
-namespace identity
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
+builder.Services.AddProblemDetails();
+builder.Services.AddOpenApi();
+
+builder.Services.AddSingleton<IdentityDatabase>();
+builder.Services.AddSingleton(KafkaOptions.Resolve(builder.Configuration));
+builder.Services.AddSingleton<IProducer<string, string>>(services =>
 {
-    public class Program
+    var kafka = services.GetRequiredService<KafkaOptions>();
+    var config = new ProducerConfig
     {
-        public static void Main(string[] args)
-        {
-            var builder = WebApplication.CreateBuilder(args);
+        BootstrapServers = kafka.BootstrapServers,
+        ClientId = $"identity-{InstanceInfo.Id}-producer",
+        Acks = Acks.All,
+        EnableIdempotence = true,
+        MessageTimeoutMs = 5000,
+        AllowAutoCreateTopics = false
+    };
 
-            // Add services to the container.
+    return new ProducerBuilder<string, string>(config).Build();
+});
 
-            builder.Services.AddControllers();
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-            builder.Services.AddOpenApi();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<QuotaService>();
+builder.Services.AddSingleton<DatabaseInitializer>();
+builder.Services.AddHealthChecks().AddCheck<MySqlHealthCheck>("mysql");
+builder.Services.AddHostedService<OutboxPublisher>();
+builder.Services.AddHostedService<QuotaEventsConsumer>();
 
-            var app = builder.Build();
+var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.MapOpenApi();
-            }
+await app.Services.GetRequiredService<DatabaseInitializer>().InitializeAsync(app.Lifetime.ApplicationStopping);
 
-            app.UseHttpsRedirection();
-
-            app.UseAuthorization();
-
-
-            app.MapControllers();
-
-            app.Run();
-        }
-    }
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
 }
+
+app.MapDefaultEndpoints();
+app.MapIdentityEndpoints();
+
+app.Run();

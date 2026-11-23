@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quota-release-requested.v1.schema.json",
+  "title": "QuotaReleaseRequested v1",
+  "description": "Publicado pelo Upload no tópico quota.release-requested na compensação da saga para devolver a vaga da cota. Consumido pelo Identity. Chave da mensagem: videoId.",
+  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "QuotaReleaseRequested" },
+    "version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["videoId", "ownerId"],
+      "properties": {
+        "videoId": { "type": "string", "minLength": 1 },
+        "ownerId": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string" }
+      }
+    }
+  }
+}

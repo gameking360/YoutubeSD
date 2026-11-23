@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quota-reserve-requested.v1.schema.json",
+  "title": "QuotaReserveRequested v1",
+  "description": "Publicado pelo Upload no tópico quota.reserve-requested para pedir uma vaga da cota do usuário. Consumido pelo Identity. Chave da mensagem: videoId.",
+  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "QuotaReserveRequested" },
+    "version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["videoId", "ownerId"],
+      "properties": {
+        "videoId": { "type": "string", "minLength": 1 },
+        "ownerId": { "type": "string", "minLength": 1 },
+        "title": { "type": "string" }
+      }
+    }
+  }
+}
