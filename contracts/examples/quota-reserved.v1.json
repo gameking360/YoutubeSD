@@ -1,0 +1,16 @@
+{
+  "messageId": "8a4d2f10-5c6b-4e7a-9d31-0f2c7b9e6a52",
+  "correlationId": "456",
+  "type": "QuotaReserved",
+  "version": 1,
+  "occurredAt": "2026-11-20T10:30:00Z",
+  "payload": {
+    "reservationId": "c0a8011e-4b2f-4d6c-8e3a-91f7d5b2c604",
+    "videoId": "456",
+    "ownerId": "123",
+    "quotaLimit": 10,
+    "quotaUsed": 3,
+    "quotaReserved": 1,
+    "quotaAvailable": 6
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "messageId": "d7e3b2a9-1f45-4c80-b6a2-3e9d8c5f1b70",
+  "correlationId": "457",
+  "type": "QuotaRejected",
+  "version": 1,
+  "occurredAt": "2026-11-20T10:31:00Z",
+  "payload": {
+    "videoId": "457",
+    "ownerId": "123",
+    "reason": "QUOTA_EXCEEDED"
+  }
+}

@@ -12,6 +12,7 @@ Orchestrador/YoutubeOrchestrador/
   YoutubeOrchestrador.ServiceDefaults/  health check e telemetria dos serviços .NET
 services/
   download/   reprodução dos vídeos (Java, Spring Boot)
+  identity/   usuários e cota de uploads (C#)
   upload/     envio e processamento dos vídeos (C#)
 contracts/    contratos das mensagens (JSON Schema)
 infra/
@@ -94,6 +95,7 @@ Com o ambiente no ar e as 3 réplicas do Download, na raiz do repositório:
 ./infra/falhas/f6-kafka-fora.sh
 ./infra/falhas/f8-replicas.sh
 ./infra/falhas/limpar.sh
+./services/identity/scripts/f5-cota.sh
 ```
 
 Cada script provoca a falha, mostra o estado antes e depois e termina com `RESULTADO: OK` ou `FALHOU`.

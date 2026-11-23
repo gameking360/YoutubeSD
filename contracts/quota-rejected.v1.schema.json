@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quota-rejected.v1.schema.json",
+  "title": "QuotaRejected v1",
+  "description": "Publicado pelo Identity no tópico quota.rejected quando não há vaga disponível, o usuário não existe ou a reserva já foi liberada. Chave da mensagem: videoId.",
+  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "QuotaRejected" },
+    "version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["videoId", "ownerId", "reason"],
+      "properties": {
+        "videoId": { "type": "string", "minLength": 1 },
+        "ownerId": { "type": "string", "minLength": 1 },
+        "reason": { "enum": ["QUOTA_EXCEEDED", "USER_NOT_FOUND", "RESERVATION_RELEASED"] }
+      }
+    }
+  }
+}
