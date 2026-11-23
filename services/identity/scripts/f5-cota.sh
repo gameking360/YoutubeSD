@@ -47,7 +47,11 @@ if [ -z "$USER_ID" ]; then
 fi
 echo "    userId=$USER_ID"
 
-curl -s -m 10 -X POST "$IDENTITY_URL/api/identity/admin/users/$USER_ID/quota/reset" \
+if [ -z "$ADMIN_TOKEN" ]; then
+  echo "Configure IDENTITY_ADMIN_TOKEN (valor local de deploy/.env) para o reset protegido."
+  exit 1
+fi
+curl --fail-with-body -s -m 10 -X POST "$IDENTITY_URL/api/identity/admin/users/$USER_ID/quota/reset" \
   -H "X-Admin-Token: $ADMIN_TOKEN" > /dev/null
 
 echo "1/4 Publicando 100 pedidos de reserva ..."

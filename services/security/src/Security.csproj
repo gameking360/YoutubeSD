@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseAppHost>false</UseAppHost>
+    <RootNamespace>YoutubeSD.Security</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="MySqlConnector" Version="2.6.2" />
+    <ProjectReference Include="../../../Orchestrador/YoutubeOrchestrador/YoutubeOrchestrador.ServiceDefaults/YoutubeOrchestrador.ServiceDefaults.csproj" />
+    <Content Include="Data/Schema.sql" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

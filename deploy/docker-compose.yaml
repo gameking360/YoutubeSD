@@ -101,6 +101,92 @@ services:
         read_only: true
     networks:
       - "aspire"
+  identityservice:
+    image: "youtubesd-identity:latest"
+    build:
+      context: ".."
+      dockerfile: "deploy/dotnet.Dockerfile"
+      args:
+        PROJECT: "services/identity/identity/identity/identity.csproj"
+    command:
+      - "identity.dll"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      HTTP_PORTS: "8080"
+      ConnectionStrings__identityDb: "Server=mysql;Port=3306;User ID=root;Password=root123;Database=identity_db"
+      IDENTITYDB_HOST: "mysql"
+      IDENTITYDB_PORT: "3306"
+      IDENTITYDB_USERNAME: "root"
+      IDENTITYDB_PASSWORD: "root123"
+      IDENTITYDB_URI: "mysql://root:root123@mysql:3306/identity_db"
+      IDENTITYDB_JDBCCONNECTIONSTRING: "jdbc:mysql://mysql:3306/identity_db"
+      IDENTITYDB_DATABASENAME: "identity_db"
+      ConnectionStrings__kafka: "kafka:9092"
+      KAFKA_HOST: "kafka"
+      KAFKA_PORT: "9092"
+      Identity__InternalApiKey: "${IDENTITY_INTERNAL_KEY}"
+      Identity__AdminToken: "${IDENTITY_ADMIN_TOKEN}"
+      SECURITYSERVICE_HTTP: "http://securityService:8080"
+      services__securityService__http__0: "http://securityService:8080"
+      SECURITYSERVICE_HTTPS: "https://securityService:8080"
+      Jwt__JwksUri: "http://securityservice:8080/api/auth/.well-known/jwks.json"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://compose-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "identityService"
+      ASPNETCORE_ENVIRONMENT: "Development"
+    expose:
+      - "8080"
+    depends_on:
+      mysql:
+        condition: "service_healthy"
+      kafka:
+        condition: "service_started"
+      kafka-init:
+        condition: "service_completed_successfully"
+    networks:
+      - "aspire"
+    restart: "on-failure"
+  securityservice:
+    image: "youtubesd-security:latest"
+    build:
+      context: ".."
+      dockerfile: "deploy/dotnet.Dockerfile"
+      args:
+        PROJECT: "services/security/src/Security.csproj"
+    command:
+      - "Security.dll"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      HTTP_PORTS: "8080"
+      ConnectionStrings__securityDb: "Server=mysql;Port=3306;User ID=root;Password=root123;Database=security_db"
+      SECURITYDB_HOST: "mysql"
+      SECURITYDB_PORT: "3306"
+      SECURITYDB_USERNAME: "root"
+      SECURITYDB_PASSWORD: "root123"
+      SECURITYDB_URI: "mysql://root:root123@mysql:3306/security_db"
+      SECURITYDB_JDBCCONNECTIONSTRING: "jdbc:mysql://mysql:3306/security_db"
+      SECURITYDB_DATABASENAME: "security_db"
+      IDENTITYSERVICE_HTTP: "http://identityService:8080"
+      services__identityService__http__0: "http://identityService:8080"
+      IDENTITYSERVICE_HTTPS: "https://identityService:8080"
+      Security__SigningKeyBase64: "${SECURITY_SIGNING_KEY}"
+      Security__IdentityInternalApiKey: "${IDENTITY_INTERNAL_KEY}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://compose-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "securityService"
+      ASPNETCORE_ENVIRONMENT: "Development"
+    expose:
+      - "8080"
+    depends_on:
+      mysql:
+        condition: "service_healthy"
+      identityservice:
+        condition: "service_started"
+    networks:
+      - "aspire"
+    restart: "on-failure"
   uploadservice:
     image: "youtubesd-upload:latest"
     build:
@@ -114,6 +200,10 @@ services:
       OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       HTTP_PORTS: "8080"
+      SECURITYSERVICE_HTTP: "http://securityService:8080"
+      services__securityService__http__0: "http://securityService:8080"
+      SECURITYSERVICE_HTTPS: "https://securityService:8080"
+      Jwt__JwksUri: "http://securityservice:8080/api/auth/.well-known/jwks.json"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://compose-dashboard:18889"
       OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
       OTEL_SERVICE_NAME: "uploadService"
@@ -139,6 +229,12 @@ services:
       UPLOADSERVICE_HTTP: "http://uploadService:8080"
       services__uploadService__http__0: "http://uploadService:8080"
       UPLOADSERVICE_HTTPS: "https://uploadService:8080"
+      IDENTITYSERVICE_HTTP: "http://identityService:8080"
+      services__identityService__http__0: "http://identityService:8080"
+      IDENTITYSERVICE_HTTPS: "https://identityService:8080"
+      SECURITYSERVICE_HTTP: "http://securityService:8080"
+      services__securityService__http__0: "http://securityService:8080"
+      SECURITYSERVICE_HTTPS: "https://securityService:8080"
       DOWNLOAD_1_HTTP: "http://download-1:8080"
       services__download-1__http__0: "http://download-1:8080"
       ReverseProxy__Clusters__download__Destinations__download-1__Address: "http://download-1"
@@ -158,6 +254,10 @@ services:
       - "8080"
     depends_on:
       uploadservice:
+        condition: "service_started"
+      identityservice:
+        condition: "service_started"
+      securityservice:
         condition: "service_started"
       download-1:
         condition: "service_started"
@@ -185,12 +285,19 @@ services:
       AWS_REGION: "us-east-1"
       AWS_ACCESS_KEY_ID: "test"
       AWS_SECRET_ACCESS_KEY: "test"
-      AUTH_MODE: "header"
+      AUTH_MODE: "jwt"
+      SECURITYSERVICE_HTTP: "http://securityService:8080"
+      services__securityService__http__0: "http://securityService:8080"
+      JWT_JWKS_URI: "http://securityservice:8080/api/auth/.well-known/jwks.json"
+      JWT_ISSUER: "youtubesd-security"
+      JWT_AUDIENCE: "youtubesd-api"
     ports:
       - "8401:8080"
     expose:
       - "8080"
     depends_on:
+      securityservice:
+        condition: "service_started"
       redis:
         condition: "service_started"
       mysql:
@@ -222,12 +329,19 @@ services:
       AWS_REGION: "us-east-1"
       AWS_ACCESS_KEY_ID: "test"
       AWS_SECRET_ACCESS_KEY: "test"
-      AUTH_MODE: "header"
+      AUTH_MODE: "jwt"
+      SECURITYSERVICE_HTTP: "http://securityService:8080"
+      services__securityService__http__0: "http://securityService:8080"
+      JWT_JWKS_URI: "http://securityservice:8080/api/auth/.well-known/jwks.json"
+      JWT_ISSUER: "youtubesd-security"
+      JWT_AUDIENCE: "youtubesd-api"
     ports:
       - "8402:8080"
     expose:
       - "8080"
     depends_on:
+      securityservice:
+        condition: "service_started"
       redis:
         condition: "service_started"
       mysql:
@@ -259,12 +373,19 @@ services:
       AWS_REGION: "us-east-1"
       AWS_ACCESS_KEY_ID: "test"
       AWS_SECRET_ACCESS_KEY: "test"
-      AUTH_MODE: "header"
+      AUTH_MODE: "jwt"
+      SECURITYSERVICE_HTTP: "http://securityService:8080"
+      services__securityService__http__0: "http://securityService:8080"
+      JWT_JWKS_URI: "http://securityservice:8080/api/auth/.well-known/jwks.json"
+      JWT_ISSUER: "youtubesd-security"
+      JWT_AUDIENCE: "youtubesd-api"
     ports:
       - "8403:8080"
     expose:
       - "8080"
     depends_on:
+      securityservice:
+        condition: "service_started"
       redis:
         condition: "service_started"
       mysql:

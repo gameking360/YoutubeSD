@@ -1,4 +1,6 @@
 using identity.Services;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace identity.Api;
 
@@ -9,11 +11,12 @@ public static class IdentityEndpoints
         var group = app.MapGroup("/api/identity");
 
         group.MapPost("/users", RegisterAsync);
-        group.MapGet("/users/me", GetMeAsync);
-        group.MapPut("/users/me", UpdateMeAsync);
-        group.MapGet("/users/{id:guid}", GetByIdAsync);
-        group.MapGet("/quota/me", GetMyQuotaAsync);
+        group.MapGet("/users/me", GetMeAsync).RequireAuthorization();
+        group.MapPut("/users/me", UpdateMeAsync).RequireAuthorization();
+        group.MapGet("/users/{id:guid}", GetByIdAsync).RequireAuthorization();
+        group.MapGet("/quota/me", GetMyQuotaAsync).RequireAuthorization();
         group.MapPost("/internal/authenticate", AuthenticateAsync);
+        group.MapGet("/internal/users/{id:guid}/authentication", GetAuthenticationContextAsync);
         group.MapPost("/admin/users/{id:guid}/quota/reset", ResetQuotaAsync);
 
         return app;
@@ -51,9 +54,12 @@ public static class IdentityEndpoints
 
     private static async Task<IResult> GetByIdAsync(
         string id,
+        HttpContext context,
         UserService users,
         CancellationToken cancellationToken)
     {
+        if (!string.Equals(CurrentUser.Id(context), id, StringComparison.OrdinalIgnoreCase)
+            && !context.User.IsInRole("ADMIN")) return Results.Forbid();
         var user = await users.GetByIdAsync(id, cancellationToken);
         return user is null ? Results.NotFound() : Results.Ok(user);
     }
@@ -138,6 +144,14 @@ public static class IdentityEndpoints
         return user is null ? Results.Unauthorized() : Results.Ok(user);
     }
 
+    private static async Task<IResult> GetAuthenticationContextAsync(
+        string id, HttpContext context, UserService users, IConfiguration configuration, CancellationToken cancellationToken)
+    {
+        if (!InternalKeyAllowed(context, configuration)) return Results.Unauthorized();
+        var user = await users.GetAuthenticationContextAsync(id, cancellationToken);
+        return user is null ? Results.NotFound() : Results.Ok(user);
+    }
+
     private static async Task<IResult> ResetQuotaAsync(
         string id,
         HttpContext context,
@@ -193,13 +207,10 @@ public static class IdentityEndpoints
         var expected = configuration["Identity:InternalApiKey"];
         if (string.IsNullOrWhiteSpace(expected))
         {
-            return true;
+            return false;
         }
 
-        return string.Equals(
-            expected,
-            context.Request.Headers["X-Internal-Key"].FirstOrDefault(),
-            StringComparison.Ordinal);
+        return SecretMatches(expected, context.Request.Headers["X-Internal-Key"].FirstOrDefault());
     }
 
     private static bool AdminKeyAllowed(HttpContext context, IConfiguration configuration)
@@ -207,12 +218,12 @@ public static class IdentityEndpoints
         var expected = configuration["Identity:AdminToken"];
         if (string.IsNullOrWhiteSpace(expected))
         {
-            return true;
+            return false;
         }
 
-        return string.Equals(
-            expected,
-            context.Request.Headers["X-Admin-Token"].FirstOrDefault(),
-            StringComparison.Ordinal);
+        return SecretMatches(expected, context.Request.Headers["X-Admin-Token"].FirstOrDefault());
     }
+
+    private static bool SecretMatches(string expected, string? provided) => provided is not null
+        && CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(expected), Encoding.UTF8.GetBytes(provided));
 }

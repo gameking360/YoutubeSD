@@ -87,6 +87,14 @@ public sealed class UserService(IdentityDatabase database, IConfiguration config
         return new AuthenticatedUserResponse(row.Id.ToString(), row.Name, row.Email, row.Role);
     }
 
+    public async Task<AuthenticationContextResponse?> GetAuthenticationContextAsync(string id, CancellationToken cancellationToken)
+    {
+        await using var connection = await database.OpenAsync(cancellationToken);
+        var row = await connection.QuerySingleOrDefaultAsync<UserRow>(new CommandDefinition(
+            "SELECT id AS Id, role AS Role FROM users WHERE id = @Id", new { Id = id }, cancellationToken: cancellationToken));
+        return row is null ? null : new AuthenticationContextResponse(row.Id.ToString(), row.Role);
+    }
+
     public async Task<UserResponse?> UpdateNameAsync(string id, string name, CancellationToken cancellationToken)
     {
         await using var connection = await database.OpenAsync(cancellationToken);

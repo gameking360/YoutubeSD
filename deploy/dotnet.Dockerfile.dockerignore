@@ -1,4 +1,9 @@
 .git
+.secrets
+**/.env
+**/*.pem
+**/*.key
+**/*.pfx
 **/bin
 **/obj
 **/node_modules
