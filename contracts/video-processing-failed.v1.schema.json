@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "video-processing-failed.v1.schema.json",
+  "title": "VideoProcessingFailed v1",
+  "description": "Publicado pelo media-processor no tópico video.processing-failed quando as tentativas se esgotam ou o erro é definitivo. O Upload compensa a saga (apaga o original e o HLS, devolve a cota e marca FAILED). Chave da mensagem: videoId.",
+  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "VideoProcessingFailed" },
+    "version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["videoId", "reason", "attempts", "failedAt", "instanceId"],
+      "properties": {
+        "videoId": { "type": "string", "minLength": 1 },
+        "reason": {
+          "enum": [
+            "SIMULATED_FAILURE",
+            "FFMPEG_ERROR",
+            "INVALID_MEDIA",
+            "SOURCE_NOT_FOUND",
+            "QUEUE_TIMEOUT",
+            "TOO_MANY_ATTEMPTS",
+            "TIMEOUT",
+            "STORAGE_ERROR",
+            "INTERNAL_ERROR"
+          ]
+        },
+        "detail": { "type": ["string", "null"] },
+        "attempts": { "type": "integer", "minimum": 0 },
+        "failedAt": { "type": "string", "format": "date-time" },
+        "instanceId": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

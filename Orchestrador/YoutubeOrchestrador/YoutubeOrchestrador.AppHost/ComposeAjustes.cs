@@ -22,7 +22,7 @@ static class ComposeAjustes
         ["${MINISTACK_BINDMOUNT_0}"] = "../infra/ministack/ready.d",
     };
 
-    public static void Arquivo(ComposeFile file, int downloadReplicas)
+    public static void Arquivo(ComposeFile file, int downloadReplicas, int uploadReplicas, int processorReplicas)
     {
         var services = file.Services;
 
@@ -62,9 +62,8 @@ static class ComposeAjustes
             "YoutubeOrchestrador.Gateway.dll");
         services["gateway"].Ports.Add("8080:8080");
 
-        DotnetService(services["uploadservice"], "youtubesd-upload",
-            "services/upload/upload/upload/upload.csproj",
-            "upload.dll");
+        Replicas(services, "upload", uploadReplicas, "youtubesd-upload", "services/upload/Dockerfile", 8500, "512M");
+        Replicas(services, "media-processor", processorReplicas, "youtubesd-media-processor", "services/upload/media-processor.Dockerfile", 8600, "2G");
 
         DotnetService(services["identityservice"], "youtubesd-identity",
             "services/identity/identity/identity/identity.csproj", "identity.dll");
@@ -74,7 +73,7 @@ static class ComposeAjustes
         services["securityservice"].DependsOn["mysql"].Condition = "service_healthy";
 
         // Compose service names are lowercase; keep logical .NET discovery names through services__ entries.
-        foreach (var name in new[] { "identityservice", "uploadservice" })
+        foreach (var name in services.Keys.Where(n => n == "identityservice" || n.StartsWith("upload-")))
             services[name].Environment["Jwt__JwksUri"] = "http://securityservice:8080/api/auth/.well-known/jwks.json";
         foreach (var name in services.Keys.Where(n => n.StartsWith("download-")))
             services[name].Environment["JWT_JWKS_URI"] = "http://securityservice:8080/api/auth/.well-known/jwks.json";
@@ -116,6 +115,31 @@ static class ComposeAjustes
             texto = texto.Replace(placeholder, valor);
         }
         return texto;
+    }
+
+    // Réplicas criadas com AddDockerfile (Upload e media-processor): mesma imagem, construída só na
+    // primeira, como o Download.
+    private static void Replicas(IDictionary<string, Service> services, string prefix, int count, string image,
+        string dockerfile, int basePort, string memory)
+    {
+        for (var i = 1; i <= count; i++)
+        {
+            var service = services[$"{prefix}-{i}"];
+            service.Image = $"{image}:latest";
+            if (i == 1)
+            {
+                service.Build = new Build { Context = "..", Dockerfile = dockerfile };
+            }
+            else
+            {
+                service.Build = null;
+                service.PullPolicy = "never";
+            }
+            service.Ports.Add($"{basePort + i}:8080");
+            service.Restart = "on-failure";
+            service.Deploy = new Deploy { Resources = new Resources { Limits = new ResourceSpec { Memory = memory } } };
+            service.DependsOn["mysql"].Condition = "service_healthy";
+        }
     }
 
     private static void DotnetService(Service service, string image, string project, string assembly)

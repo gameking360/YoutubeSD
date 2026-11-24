@@ -4,12 +4,25 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-	  <UseAppHost>false</UseAppHost>
-
+    <UseAppHost>false</UseAppHost>
+    <RootNamespace>Upload</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\..\Orchestrador\YoutubeOrchestrador\YoutubeOrchestrador.ServiceDefaults\YoutubeOrchestrador.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\upload.messaging\upload.messaging.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="upload.tests" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "video-uploaded.v1.schema.json",
+  "title": "VideoUploaded v1",
+  "description": "Publicado pelo Upload no tópico video.uploaded quando o original está completo em videos-raw e a cota foi reservada. Consumido pelo media-processor (grupo media-processor). Chave da mensagem: videoId.",
+  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "VideoUploaded" },
+    "version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["videoId", "ownerId", "title", "rawBucket", "rawKey", "sizeBytes", "hlsBucket", "hlsPrefix", "queueDeadline", "uploadedAt"],
+      "properties": {
+        "videoId": { "type": "string", "minLength": 1 },
+        "ownerId": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "rawBucket": { "type": "string", "minLength": 1 },
+        "rawKey": {
+          "description": "Caminho do original dentro do bucket, ex.: 456/original.mp4.",
+          "type": "string",
+          "minLength": 1
+        },
+        "sizeBytes": { "type": "integer", "minimum": 1 },
+        "contentType": { "type": ["string", "null"] },
+        "hlsBucket": { "type": "string", "minLength": 1 },
+        "hlsPrefix": {
+          "description": "Prefixo onde o HLS deve ser gravado, ex.: 456/.",
+          "type": "string",
+          "minLength": 1
+        },
+        "queueDeadline": {
+          "description": "Prazo para um media-processor começar. Depois dele o Upload compensa e o processor descarta o job (QUEUE_TIMEOUT).",
+          "type": "string",
+          "format": "date-time"
+        },
+        "uploadedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

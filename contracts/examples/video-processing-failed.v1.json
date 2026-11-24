@@ -1,0 +1,15 @@
+{
+  "messageId": "7f3e2d1c-0b9a-4876-a5b4-c3d2e1f0a9b8",
+  "correlationId": "457",
+  "type": "VideoProcessingFailed",
+  "version": 1,
+  "occurredAt": "2026-11-20T10:31:10Z",
+  "payload": {
+    "videoId": "457",
+    "reason": "SIMULATED_FAILURE",
+    "detail": "Falha simulada da dependência (taxa 1, origem chaos_settings).",
+    "attempts": 3,
+    "failedAt": "2026-11-20T10:31:10Z",
+    "instanceId": "media-processor-2"
+  }
+}

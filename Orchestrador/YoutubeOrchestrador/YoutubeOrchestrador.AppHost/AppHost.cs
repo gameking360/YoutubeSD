@@ -7,9 +7,18 @@ builder.Configuration.AddJsonFile(localSecrets, optional: true).AddEnvironmentVa
 
 var downloadReplicas = int.TryParse(builder.Configuration["DownloadReplicas"], out var replicas) ? replicas : 3;
 
+// Upload: réplicas da API e do media-processor (escala horizontal) e recursos do processor (escala vertical).
+var uploadReplicas = int.TryParse(builder.Configuration["UploadReplicas"], out var uploadCount) ? Math.Max(1, uploadCount) : 2;
+var processorReplicas = int.TryParse(builder.Configuration["ProcessorReplicas"], out var processorCount) ? Math.Max(1, processorCount) : 2;
+var processorCpus = builder.Configuration["ProcessorCpus"];
+var processorMemory = builder.Configuration["ProcessorMemory"] ?? "2g";
+// R5: dependência instável simulada. Também dá para trocar ao vivo pela tabela media_db.chaos_settings.
+var processorLatencyMs = builder.Configuration["ProcessorLatencyMs"] ?? "0";
+var processorFailureRate = builder.Configuration["ProcessorFailureRate"] ?? "0";
+
 builder.AddDockerComposeEnvironment("compose")
     .WithDashboard(dashboard => dashboard.WithHostPort(18888))
-    .ConfigureComposeFile(file => ComposeAjustes.Arquivo(file, downloadReplicas));
+    .ConfigureComposeFile(file => ComposeAjustes.Arquivo(file, downloadReplicas, uploadReplicas, processorReplicas));
 
 var redisPassword = builder.AddParameter("redis-password", "root123", secret: true);
 var mysqlPassword = builder.AddParameter("mysql-password", "root123", secret: true);
@@ -43,6 +52,8 @@ var mysql = builder.AddMySql("mysql", password: mysqlPassword, port: 3306)
 var downloadDb = mysql.AddDatabase("downloadDb", "download_db");
 var identityDb = mysql.AddDatabase("identityDb", "identity_db");
 var securityDb = mysql.AddDatabase("securityDb", "security_db");
+var uploadDb = mysql.AddDatabase("uploadDb", "upload_db");
+var mediaDb = mysql.AddDatabase("mediaDb", "media_db");
 
 var ministack = builder.AddContainer("ministack", "ministackorg/ministack", "1.5.43")
     .WithHttpEndpoint(port: 4566, targetPort: 4566)
@@ -74,18 +85,87 @@ var security = builder.AddProject<Projects.Security>("securityService")
 identity.WithReference(security)
     .WithEnvironment("Jwt__JwksUri", "http://securityService/api/auth/.well-known/jwks.json");
 
-var upload = builder.AddProject<Projects.upload>("uploadService")
-    .WithHttpHealthCheck("/health")
-    .WithReference(security)
-    .WithEnvironment("Jwt__JwksUri", "http://securityService/api/auth/.well-known/jwks.json");
-
 var gateway = builder.AddProject<Projects.YoutubeOrchestrador_Gateway>("gateway")
     .WithHttpHealthCheck("/health")
-    .WithReference(upload)
-    .WaitFor(upload)
     .WithReference(identity)
     .WaitFor(identity)
     .WithReference(security).WaitFor(security);
+
+var jwksUri = ReferenceExpression.Create($"{security.GetEndpoint("http")}/api/auth/.well-known/jwks.json");
+
+// Upload API: réplicas sem estado (tudo em upload_db + S3) atrás do YARP. Se uma cai, o cliente
+// repete a parte e o gateway manda para outra; sem nenhuma, o cliente espera ela voltar.
+for (var i = 1; i <= uploadReplicas; i++)
+{
+    var name = $"upload-{i}";
+
+    var upload = builder.AddDockerfile(name, "../../..", "services/upload/Dockerfile")
+        .WithHttpEndpoint(port: 8500 + i, targetPort: 8080, isProxied: false)
+        .WithHttpHealthCheck("/health")
+        .WithContainerRuntimeArgs("--memory", "512m")
+        .WithEnvironment("INSTANCE_ID", name)
+        .WithOtlpExporter()
+        .WithEnvironment("ConnectionStrings__uploadDb",
+            ReferenceExpression.Create($"Server=mysql;Port=3306;User ID=root;Password={mysqlPassword.Resource};Database=upload_db"))
+        .WithEnvironment("Kafka__BootstrapServers", "kafka:9093")
+        .WithEnvironment("S3__ServiceUrl", "http://ministack:4566")
+        .WithEnvironment("S3__Region", "us-east-1")
+        .WithEnvironment("S3__AccessKey", "test")
+        .WithEnvironment("S3__SecretKey", "test")
+        .WithReference(security.GetEndpoint("http"))
+        .WithEnvironment("Jwt__JwksUri", jwksUri)
+        .WithEnvironment("Jwt__Issuer", "youtubesd-security")
+        .WithEnvironment("Jwt__Audience", "youtubesd-api")
+        .WithEnvironment("Jwt__RequireHttpsMetadata", "false")
+        .WaitFor(security)
+        .WaitFor(uploadDb)
+        .WaitForCompletion(kafkaInit)
+        .WaitFor(ministack);
+
+    foreach (var setting in new[] { "QueueTimeoutMinutes", "ProcessingBaseSeconds", "ProcessingSecondsPerMb", "UploadIdleTimeoutMinutes" })
+    {
+        if (builder.Configuration[$"Upload{setting}"] is { Length: > 0 } value)
+        {
+            upload.WithEnvironment($"Upload__Saga__{setting}", value);
+        }
+    }
+
+    gateway
+        .WithReference(upload.GetEndpoint("http"))
+        .WithEnvironment($"ReverseProxy__Clusters__upload__Destinations__{name}__Address", $"http://{name}")
+        .WaitFor(upload);
+}
+
+// media-processor (FFmpeg): consumer group "media-processor"; um docker kill numa réplica no meio
+// do job faz outra assumir (F2). Sem nenhuma réplica, os vídeos esperam na fila do Kafka.
+for (var i = 1; i <= processorReplicas; i++)
+{
+    var name = $"media-processor-{i}";
+
+    var processor = builder.AddDockerfile(name, "../../..", "services/upload/media-processor.Dockerfile")
+        .WithHttpEndpoint(port: 8600 + i, targetPort: 8080, isProxied: false)
+        .WithHttpHealthCheck("/health")
+        .WithContainerRuntimeArgs("--memory", processorMemory)
+        .WithEnvironment("INSTANCE_ID", name)
+        .WithOtlpExporter()
+        .WithEnvironment("ConnectionStrings__mediaDb",
+            ReferenceExpression.Create($"Server=mysql;Port=3306;User ID=root;Password={mysqlPassword.Resource};Database=media_db"))
+        .WithEnvironment("Kafka__BootstrapServers", "kafka:9093")
+        .WithEnvironment("S3__ServiceUrl", "http://ministack:4566")
+        .WithEnvironment("S3__Region", "us-east-1")
+        .WithEnvironment("S3__AccessKey", "test")
+        .WithEnvironment("S3__SecretKey", "test")
+        .WithEnvironment("PROCESSOR_LATENCY_MS", processorLatencyMs)
+        .WithEnvironment("PROCESSOR_FAILURE_RATE", processorFailureRate)
+        .WaitFor(mediaDb)
+        .WaitForCompletion(kafkaInit)
+        .WaitFor(ministack);
+
+    if (!string.IsNullOrWhiteSpace(processorCpus))
+    {
+        processor.WithContainerRuntimeArgs("--cpus", processorCpus);
+    }
+}
 
 for (var i = 1; i <= downloadReplicas; i++)
 {
