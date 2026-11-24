@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
@@ -25,6 +26,9 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.JwtClaimValidator;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
@@ -49,8 +53,13 @@ class JwtModeTest {
     @TestConfiguration(proxyBeanMethods = false)
     static class Keys {
         @Bean
+        @Primary
         JwtDecoder jwtDecoder() throws JOSEException {
-            return NimbusJwtDecoder.withPublicKey(SECURITY_KEY.toRSAPublicKey()).build();
+            var decoder = NimbusJwtDecoder.withPublicKey(SECURITY_KEY.toRSAPublicKey()).build();
+            decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                    JwtValidators.createDefaultWithIssuer("youtubesd-security"),
+                    new JwtClaimValidator<List<String>>("aud", aud -> aud != null && aud.contains("youtubesd-api"))));
+            return decoder;
         }
     }
 
@@ -132,6 +141,8 @@ class JwtModeTest {
     private static String token(String subject, RSAKey key, Instant expiresAt) {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(subject)
+                .issuer("youtubesd-security")
+                .audience(List.of("youtubesd-api"))
                 .issuedAt(expiresAt.minusSeconds(900))
                 .expiresAt(expiresAt)
                 .build();

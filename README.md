@@ -11,6 +11,7 @@ Orchestrador/YoutubeOrchestrador/
   YoutubeOrchestrador.Gateway/          gateway YARP (porta 8080)
   YoutubeOrchestrador.ServiceDefaults/  health check e telemetria dos serviços .NET
 services/
+  security/   autenticação, JWT RS256, JWKS e renovação de sessões (C#)
   download/   reprodução dos vídeos (Java, Spring Boot)
   identity/   usuários e cota de uploads (C#)
   upload/     envio e processamento dos vídeos (C#)
@@ -32,6 +33,14 @@ deploy/       Docker Compose gerado a partir do AppHost
 
 ## Subir pelo Aspire
 
+Na raiz do repositório, prepare uma vez a chave RSA e os segredos locais:
+
+```
+dotnet run --project services/security/tools/SecuritySetup
+```
+
+O comando preserva valores existentes em `.secrets/security.json` e `deploy/.env`, ambos ignorados pelo Git. Não remova esses arquivos entre reinícios: todas as réplicas precisam compartilhar a mesma chave.
+
 ```
 cd Orchestrador/YoutubeOrchestrador/YoutubeOrchestrador.AppHost
 dotnet run --launch-profile http
@@ -44,6 +53,8 @@ dotnet run --launch-profile http -- --DownloadReplicas 1
 ```
 
 ## Subir pelo Docker Compose
+
+Execute a preparação acima antes da primeira subida.
 
 ```
 cd deploy
@@ -95,8 +106,22 @@ Com o ambiente no ar e as 3 réplicas do Download, na raiz do repositório:
 ./infra/falhas/f6-kafka-fora.sh
 ./infra/falhas/f8-replicas.sh
 ./infra/falhas/limpar.sh
-./services/identity/scripts/f5-cota.sh
 ```
+
+Para o F5, configure `IDENTITY_ADMIN_TOKEN` com o valor local de `deploy/.env` e execute `./services/identity/scripts/f5-cota.sh`. O reset de cota exige esse segredo.
+
+## Autenticação e testes do Security
+
+Cadastre um usuário em `POST /api/identity/users` (`name`, `email`, `password`) e faça login em `POST /api/auth/login` (`email`, `password`). Use `accessToken` como `Authorization: Bearer <token>` nas rotas pessoais do Identity e Download. `X-User-Id` não autentica usuários no ambiente integrado. A renovação é `POST /api/auth/refresh` com `refreshToken` e devolve um novo par de tokens; cada refresh token só pode ser usado uma vez.
+
+```
+dotnet test services/security/tests/Security.Tests.csproj
+./services/security/scripts/smoke-auth.sh
+```
+
+O primeiro comando usa um MySQL descartável e não depende do ambiente completo. O segundo precisa do Compose ou Aspire no ar e valida cadastro, login, JWT entre C# e Java, perfil, cota, progresso e renovação pelo gateway. Consulte `services/security/README.md` para configuração, persistência e comportamento sob falha.
+
+As rotas `/api/identity/internal/**` são bloqueadas no gateway. O cadastro permanece público; perfil, cota e progresso exigem JWT. O JWKS público está em `GET /api/auth/.well-known/jwks.json`.
 
 Cada script provoca a falha, mostra o estado antes e depois e termina com `RESULTADO: OK` ou `FALHOU`.
 O `limpar.sh` remove os dados de teste do catálogo.

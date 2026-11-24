@@ -5,10 +5,12 @@ using identity.Data;
 using identity.Messaging;
 using identity.Observability;
 using identity.Services;
+using YoutubeSD.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.AddJwtAuthentication();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 
@@ -46,6 +48,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapDefaultEndpoints();
 app.MapIdentityEndpoints();
 

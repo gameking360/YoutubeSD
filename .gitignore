@@ -24,6 +24,11 @@ dist/
 .DS_Store
 Thumbs.db
 .env
+.secrets/
+*.pem
+*.key
+*.pfx
+TestResults/
 *.log
 
 # Angular
