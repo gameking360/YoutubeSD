@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "video-processed.v1.schema.json",
+  "title": "VideoProcessed v1",
+  "description": "Publicado pelo media-processor no tópico video.processed depois que todos os arquivos HLS (segmentos, playlists, master.m3u8 por último e thumbnail) foram gravados. Consumido pelo Upload. Chave da mensagem: videoId.",
+  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "VideoProcessed" },
+    "version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["videoId", "hlsBucket", "masterKey", "durationSec", "renditions", "processedAt", "instanceId"],
+      "properties": {
+        "videoId": { "type": "string", "minLength": 1 },
+        "hlsBucket": { "type": "string", "minLength": 1 },
+        "masterKey": {
+          "description": "Caminho do master.m3u8 dentro do bucket, ex.: 456/master.m3u8.",
+          "type": "string",
+          "minLength": 1
+        },
+        "durationSec": { "type": "integer", "minimum": 1 },
+        "renditions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "width", "height", "bandwidth"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "width": { "type": "integer", "minimum": 1 },
+              "height": { "type": "integer", "minimum": 1 },
+              "bandwidth": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "thumbnailKey": { "type": ["string", "null"] },
+        "processedAt": { "type": "string", "format": "date-time" },
+        "instanceId": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

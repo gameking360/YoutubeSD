@@ -10,6 +10,7 @@ quota.reserved
 quota.rejected
 quota.release-requested
 video.uploaded
+video.processing-started
 video.processed
 video.processing-failed
 video.published

@@ -1,0 +1,20 @@
+{
+  "messageId": "e4a1c6b2-9d3f-4e87-b5a0-1f2c3d4e5f60",
+  "correlationId": "456",
+  "type": "VideoProcessed",
+  "version": 1,
+  "occurredAt": "2026-11-20T10:29:57Z",
+  "payload": {
+    "videoId": "456",
+    "hlsBucket": "videos-hls",
+    "masterKey": "456/master.m3u8",
+    "durationSec": 1820,
+    "renditions": [
+      { "name": "360p", "width": 640, "height": 360, "bandwidth": 928000 },
+      { "name": "720p", "width": 1280, "height": 720, "bandwidth": 2928000 }
+    ],
+    "thumbnailKey": "456/thumb.jpg",
+    "processedAt": "2026-11-20T10:29:57Z",
+    "instanceId": "media-processor-1"
+  }
+}

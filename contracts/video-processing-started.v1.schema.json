@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "video-processing-started.v1.schema.json",
+  "title": "VideoProcessingStarted v1",
+  "description": "Publicado pelo media-processor no tópico video.processing-started a cada tentativa de processamento. O Upload arma o prazo de processamento ao recebê-lo. Chave da mensagem: videoId.",
+  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "VideoProcessingStarted" },
+    "version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["videoId", "attempt", "instanceId", "startedAt"],
+      "properties": {
+        "videoId": { "type": "string", "minLength": 1 },
+        "attempt": {
+          "description": "Número da tentativa, somado entre as réplicas.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "instanceId": { "type": "string", "minLength": 1 },
+        "startedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

@@ -22,7 +22,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\services\security\src\Security.csproj" />
     <ProjectReference Include="..\..\..\services\identity\identity\identity\identity.csproj" />
-    <ProjectReference Include="..\..\..\services\upload\upload\upload\upload.csproj" />
     <ProjectReference Include="..\YoutubeOrchestrador.Gateway\YoutubeOrchestrador.Gateway.csproj" />
   </ItemGroup>
 

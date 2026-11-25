@@ -1,0 +1,13 @@
+{
+  "messageId": "0c9d7e21-6b3a-4f58-8e1d-4a2b9c7f3e65",
+  "correlationId": "456",
+  "type": "VideoProcessingStarted",
+  "version": 1,
+  "occurredAt": "2026-11-20T10:20:03Z",
+  "payload": {
+    "videoId": "456",
+    "attempt": 1,
+    "instanceId": "media-processor-1",
+    "startedAt": "2026-11-20T10:20:03Z"
+  }
+}

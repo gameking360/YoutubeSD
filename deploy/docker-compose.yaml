@@ -187,32 +187,6 @@ services:
     networks:
       - "aspire"
     restart: "on-failure"
-  uploadservice:
-    image: "youtubesd-upload:latest"
-    build:
-      context: ".."
-      dockerfile: "deploy/dotnet.Dockerfile"
-      args:
-        PROJECT: "services/upload/upload/upload/upload.csproj"
-    command:
-      - "upload.dll"
-    environment:
-      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
-      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
-      HTTP_PORTS: "8080"
-      SECURITYSERVICE_HTTP: "http://securityService:8080"
-      services__securityService__http__0: "http://securityService:8080"
-      SECURITYSERVICE_HTTPS: "https://securityService:8080"
-      Jwt__JwksUri: "http://securityservice:8080/api/auth/.well-known/jwks.json"
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://compose-dashboard:18889"
-      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
-      OTEL_SERVICE_NAME: "uploadService"
-      ASPNETCORE_ENVIRONMENT: "Development"
-    expose:
-      - "8080"
-    networks:
-      - "aspire"
-    restart: "on-failure"
   gateway:
     image: "youtubesd-gateway:latest"
     build:
@@ -226,15 +200,18 @@ services:
       OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       HTTP_PORTS: "8080"
-      UPLOADSERVICE_HTTP: "http://uploadService:8080"
-      services__uploadService__http__0: "http://uploadService:8080"
-      UPLOADSERVICE_HTTPS: "https://uploadService:8080"
       IDENTITYSERVICE_HTTP: "http://identityService:8080"
       services__identityService__http__0: "http://identityService:8080"
       IDENTITYSERVICE_HTTPS: "https://identityService:8080"
       SECURITYSERVICE_HTTP: "http://securityService:8080"
       services__securityService__http__0: "http://securityService:8080"
       SECURITYSERVICE_HTTPS: "https://securityService:8080"
+      UPLOAD_1_HTTP: "http://upload-1:8080"
+      services__upload-1__http__0: "http://upload-1:8080"
+      ReverseProxy__Clusters__upload__Destinations__upload-1__Address: "http://upload-1"
+      UPLOAD_2_HTTP: "http://upload-2:8080"
+      services__upload-2__http__0: "http://upload-2:8080"
+      ReverseProxy__Clusters__upload__Destinations__upload-2__Address: "http://upload-2"
       DOWNLOAD_1_HTTP: "http://download-1:8080"
       services__download-1__http__0: "http://download-1:8080"
       ReverseProxy__Clusters__download__Destinations__download-1__Address: "http://download-1"
@@ -253,11 +230,13 @@ services:
     expose:
       - "8080"
     depends_on:
-      uploadservice:
-        condition: "service_started"
       identityservice:
         condition: "service_started"
       securityservice:
+        condition: "service_started"
+      upload-1:
+        condition: "service_started"
+      upload-2:
         condition: "service_started"
       download-1:
         condition: "service_started"
@@ -268,6 +247,158 @@ services:
     networks:
       - "aspire"
     restart: "on-failure"
+  upload-1:
+    image: "youtubesd-upload:latest"
+    build:
+      context: ".."
+      dockerfile: "services/upload/Dockerfile"
+    environment:
+      INSTANCE_ID: "upload-1"
+      ConnectionStrings__uploadDb: "Server=mysql;Port=3306;User ID=root;Password=root123;Database=upload_db"
+      Kafka__BootstrapServers: "kafka:9093"
+      S3__ServiceUrl: "http://ministack:4566"
+      S3__Region: "us-east-1"
+      S3__AccessKey: "test"
+      S3__SecretKey: "test"
+      SECURITYSERVICE_HTTP: "http://securityService:8080"
+      services__securityService__http__0: "http://securityService:8080"
+      Jwt__JwksUri: "http://securityservice:8080/api/auth/.well-known/jwks.json"
+      Jwt__Issuer: "youtubesd-security"
+      Jwt__Audience: "youtubesd-api"
+      Jwt__RequireHttpsMetadata: "false"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://compose-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "upload-1"
+    ports:
+      - "8501:8080"
+    expose:
+      - "8080"
+    depends_on:
+      securityservice:
+        condition: "service_started"
+      mysql:
+        condition: "service_healthy"
+      kafka-init:
+        condition: "service_completed_successfully"
+      ministack:
+        condition: "service_started"
+    networks:
+      - "aspire"
+    restart: "on-failure"
+    deploy:
+      resources:
+        limits:
+          memory: "512M"
+  upload-2:
+    image: "youtubesd-upload:latest"
+    pull_policy: "never"
+    environment:
+      INSTANCE_ID: "upload-2"
+      ConnectionStrings__uploadDb: "Server=mysql;Port=3306;User ID=root;Password=root123;Database=upload_db"
+      Kafka__BootstrapServers: "kafka:9093"
+      S3__ServiceUrl: "http://ministack:4566"
+      S3__Region: "us-east-1"
+      S3__AccessKey: "test"
+      S3__SecretKey: "test"
+      SECURITYSERVICE_HTTP: "http://securityService:8080"
+      services__securityService__http__0: "http://securityService:8080"
+      Jwt__JwksUri: "http://securityservice:8080/api/auth/.well-known/jwks.json"
+      Jwt__Issuer: "youtubesd-security"
+      Jwt__Audience: "youtubesd-api"
+      Jwt__RequireHttpsMetadata: "false"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://compose-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "upload-2"
+    ports:
+      - "8502:8080"
+    expose:
+      - "8080"
+    depends_on:
+      securityservice:
+        condition: "service_started"
+      mysql:
+        condition: "service_healthy"
+      kafka-init:
+        condition: "service_completed_successfully"
+      ministack:
+        condition: "service_started"
+    networks:
+      - "aspire"
+    restart: "on-failure"
+    deploy:
+      resources:
+        limits:
+          memory: "512M"
+  media-processor-1:
+    image: "youtubesd-media-processor:latest"
+    build:
+      context: ".."
+      dockerfile: "services/upload/media-processor.Dockerfile"
+    environment:
+      INSTANCE_ID: "media-processor-1"
+      ConnectionStrings__mediaDb: "Server=mysql;Port=3306;User ID=root;Password=root123;Database=media_db"
+      Kafka__BootstrapServers: "kafka:9093"
+      S3__ServiceUrl: "http://ministack:4566"
+      S3__Region: "us-east-1"
+      S3__AccessKey: "test"
+      S3__SecretKey: "test"
+      PROCESSOR_LATENCY_MS: "0"
+      PROCESSOR_FAILURE_RATE: "0"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://compose-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "media-processor-1"
+    ports:
+      - "8601:8080"
+    expose:
+      - "8080"
+    depends_on:
+      mysql:
+        condition: "service_healthy"
+      kafka-init:
+        condition: "service_completed_successfully"
+      ministack:
+        condition: "service_started"
+    networks:
+      - "aspire"
+    restart: "on-failure"
+    deploy:
+      resources:
+        limits:
+          memory: "2G"
+  media-processor-2:
+    image: "youtubesd-media-processor:latest"
+    pull_policy: "never"
+    environment:
+      INSTANCE_ID: "media-processor-2"
+      ConnectionStrings__mediaDb: "Server=mysql;Port=3306;User ID=root;Password=root123;Database=media_db"
+      Kafka__BootstrapServers: "kafka:9093"
+      S3__ServiceUrl: "http://ministack:4566"
+      S3__Region: "us-east-1"
+      S3__AccessKey: "test"
+      S3__SecretKey: "test"
+      PROCESSOR_LATENCY_MS: "0"
+      PROCESSOR_FAILURE_RATE: "0"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://compose-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "media-processor-2"
+    ports:
+      - "8602:8080"
+    expose:
+      - "8080"
+    depends_on:
+      mysql:
+        condition: "service_healthy"
+      kafka-init:
+        condition: "service_completed_successfully"
+      ministack:
+        condition: "service_started"
+    networks:
+      - "aspire"
+    restart: "on-failure"
+    deploy:
+      resources:
+        limits:
+          memory: "2G"
   download-1:
     image: "youtubesd-download:latest"
     build:

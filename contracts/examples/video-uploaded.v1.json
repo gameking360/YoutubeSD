@@ -1,0 +1,20 @@
+{
+  "messageId": "5b0e8f6a-2c41-4d7e-9a3b-6f1d2e8c9a10",
+  "correlationId": "456",
+  "type": "VideoUploaded",
+  "version": 1,
+  "occurredAt": "2026-11-20T10:20:00Z",
+  "payload": {
+    "videoId": "456",
+    "ownerId": "123",
+    "title": "Aula 1",
+    "rawBucket": "videos-raw",
+    "rawKey": "456/original.mp4",
+    "sizeBytes": 734003200,
+    "contentType": "video/mp4",
+    "hlsBucket": "videos-hls",
+    "hlsPrefix": "456/",
+    "queueDeadline": "2026-11-20T10:50:00Z",
+    "uploadedAt": "2026-11-20T10:20:00Z"
+  }
+}
