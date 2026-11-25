@@ -3,6 +3,9 @@
 Plataforma de vídeos sob demanda com arquitetura de microsserviços.
 Trabalho final de Sistemas Distribuídos — FURB.
 
+- [Como iniciar](docs/COMO-INICIAR.md): do clone ao primeiro vídeo publicado, passo a passo.
+- [Arquitetura e decisões](docs/ARQUITETURA.md): definição, mapa do sistema e o porquê de cada escolha.
+
 ## Estrutura
 
 ```
