@@ -63,15 +63,19 @@ dotnet run --launch-profile http -- --UploadReplicas 3 --ProcessorReplicas 3 --P
 
 ## Subir pelo Docker Compose
 
-Execute a preparação acima antes da primeira subida.
+Na raiz do repositório, suba o ambiente com um comando.
 
-```
-cd deploy
-docker compose up --build -d
+```sh
+docker compose --project-directory deploy up --build -d
 ```
 
-Para parar: `docker compose down`. Os dados ficam nos volumes.
-O dashboard do Aspire fica em http://localhost:18888; o token de acesso aparece em `docker compose logs compose-dashboard`.
+Em `deploy/`, o comando equivalente é `docker compose up --build -d`. Na primeira subida, o
+`security-init` aproveita as credenciais fornecidas em `deploy/.env` ou gera as que faltam.
+Ele as grava em volumes do Docker e encerra antes da partida do Security e do Identity.
+
+Para parar a partir da raiz, use `docker compose --project-directory deploy down`. Os dados e as
+credenciais persistem nos volumes. O dashboard do Aspire fica em http://localhost:18888 e seu
+token de acesso aparece em `docker compose --project-directory deploy logs compose-dashboard`.
 
 Para regenerar o `docker-compose.yaml` depois de alterar o AppHost, na pasta do AppHost:
 
@@ -133,7 +137,7 @@ Com o ambiente no ar e as 3 réplicas do Download, na raiz do repositório:
 ./infra/falhas/limpar.sh
 ```
 
-Para o F5, configure `IDENTITY_ADMIN_TOKEN` com o valor local de `deploy/.env` e execute `./services/identity/scripts/f5-cota.sh`. O reset de cota exige esse segredo.
+Para o F5, carregue o token administrativo do ambiente em uso e execute `./services/identity/scripts/f5-cota.sh`. [Como obter o token](docs/COMO-INICIAR.md#token-administrativo)
 
 Do Upload e do media-processor (com pelo menos 2 réplicas do processor):
 

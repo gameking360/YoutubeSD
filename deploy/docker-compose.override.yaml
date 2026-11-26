@@ -1,0 +1,59 @@
+services:
+  security-init:
+    image: mcr.microsoft.com/dotnet/aspnet:10.0
+    network_mode: none
+    entrypoint: ["/bin/bash", "/security-init.sh"]
+    environment:
+      SECURITY_SIGNING_KEY: ${SECURITY_SIGNING_KEY:-}
+      IDENTITY_INTERNAL_KEY: ${IDENTITY_INTERNAL_KEY:-}
+      IDENTITY_ADMIN_TOKEN: ${IDENTITY_ADMIN_TOKEN:-}
+    volumes:
+      - ./security-init.sh:/security-init.sh:ro
+      - signing-key:/run/youtubesd/signing-key
+      - internal-key:/run/youtubesd/internal-key
+      - admin-token:/run/youtubesd/admin-token
+
+  securityservice:
+    depends_on:
+      security-init:
+        condition: service_completed_successfully
+    volumes:
+      - signing-key:/run/youtubesd/signing-key:ro
+      - internal-key:/run/youtubesd/internal-key:ro
+    environment:
+      Security__SigningKeyBase64: !reset null
+      Security__IdentityInternalApiKey: !reset null
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        Security__SigningKeyBase64=$$(cat /run/youtubesd/signing-key/value)
+        Security__IdentityInternalApiKey=$$(cat /run/youtubesd/internal-key/value)
+        export Security__SigningKeyBase64 Security__IdentityInternalApiKey
+        exec dotnet "$$@"
+      - --
+
+  identityservice:
+    depends_on:
+      security-init:
+        condition: service_completed_successfully
+    volumes:
+      - internal-key:/run/youtubesd/internal-key:ro
+      - admin-token:/run/youtubesd/admin-token:ro
+    environment:
+      Identity__InternalApiKey: !reset null
+      Identity__AdminToken: !reset null
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        Identity__InternalApiKey=$$(cat /run/youtubesd/internal-key/value)
+        Identity__AdminToken=$$(cat /run/youtubesd/admin-token/value)
+        export Identity__InternalApiKey Identity__AdminToken
+        exec dotnet "$$@"
+      - --
+
+volumes:
+  signing-key:
+  internal-key:
+  admin-token:

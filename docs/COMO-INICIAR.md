@@ -12,8 +12,8 @@ Tempo estimado da primeira subida: 10 a 20 minutos, a maior parte baixando image
 | Ferramenta | Obrigatória? | Para quê |
 |---|---|---|
 | [Docker Desktop](https://www.docker.com/products/docker-desktop/) aberto | Sim | Todos os serviços e a infraestrutura rodam em containers |
-| [.NET SDK 10](https://dotnet.microsoft.com/download) | Sim | Gerar as chaves (passo 3) e subir pelo Aspire |
-| Git Bash (vem com o [Git for Windows](https://git-scm.com/download/win)) | Sim, no Windows | Os scripts de `infra/` são Bash. No Linux e no macOS, use o terminal normal |
+| [.NET SDK 10](https://dotnet.microsoft.com/download) | Para o Aspire | Gerar as chaves (passo 3) e subir pelo Aspire |
+| Git Bash (vem com o [Git for Windows](https://git-scm.com/download/win)) | Para os scripts no Windows | Executar os scripts Bash de `infra/` |
 | Java 25 | Não | Só para rodar os testes do Download fora do Docker |
 
 FFmpeg, MySQL, Kafka e Redis **não** precisam estar instalados: tudo vem em containers.
@@ -22,12 +22,8 @@ FFmpeg, MySQL, Kafka e Redis **não** precisam estar instalados: tudo vem em con
 Upload, 2 × 2 GB do media-processor), mais Kafka e MySQL. Reserve pelo menos 8 GB ao Docker
 (Docker Desktop → Settings → Resources) ou suba com menos réplicas (passo 4).
 
-Confira as versões:
-
-```bash
-docker --version
-dotnet --version   # 10.x
-```
+Confira a instalação com `docker compose version`. Para usar o Aspire, confira também se
+`dotnet --version` retorna `10.x`.
 
 ---
 
@@ -42,7 +38,9 @@ Todos os comandos deste guia partem da **raiz do repositório**, salvo quando in
 
 ---
 
-## 3. Gerar chaves e segredos (uma vez só)
+## 3. Gerar chaves e segredos para o Aspire (uma vez só)
+
+Para usar o Docker Compose, vá direto ao [passo 4](#4-subir-o-ambiente). Para o Aspire, execute o utilitário na raiz.
 
 ```bash
 dotnet run --project services/security/tools/SecuritySetup
@@ -53,7 +51,7 @@ O comando cria dois arquivos, ambos fora do Git:
 | Arquivo | Usado por |
 |---|---|
 | `.secrets/security.json` | Aspire |
-| `deploy/.env` | Docker Compose |
+| `deploy/.env` | Importação opcional na primeira subida do Docker Compose |
 
 Eles guardam a chave RSA que assina os tokens, a chave interna entre Security e Identity e o
 token de administrador do reset de cota. Rodar de novo **preserva** os valores existentes.
@@ -95,18 +93,24 @@ e continuam rodando; os dados ficam nos volumes para a próxima subida.
 ### Opção B — Docker Compose (só Docker)
 
 ```bash
-cd deploy
-docker compose up --build -d
+docker compose --project-directory deploy up --build -d
 ```
 
-Acompanhe com `docker compose ps` até todos ficarem `running` / `healthy`. O dashboard do Aspire
-fica em **http://localhost:18888**; o token de acesso aparece em:
+Se o terminal já estiver em `deploy/`, use `docker compose up --build -d`. O Compose carrega
+o YAML do AppHost e o `docker-compose.override.yaml`. Na primeira subida, o `security-init`
+importa os valores fornecidos em `deploy/.env` e gera as credenciais que faltam. Nas próximas
+subidas, reutiliza os valores dos volumes. Security e Identity iniciam depois que o
+inicializador termina com sucesso.
+
+A partir da raiz, acompanhe com `docker compose --project-directory deploy ps -a`. Os serviços
+devem ficar em execução e os inicializadores `security-init` e `kafka-init` devem terminar com
+código zero. O dashboard do Aspire fica em **http://localhost:18888**. Para consultar seu token de acesso, use o comando abaixo.
 
 ```bash
-docker compose logs compose-dashboard
+docker compose --project-directory deploy logs compose-dashboard
 ```
 
-Para parar: `docker compose down` (os dados ficam nos volumes).
+Para parar, execute `docker compose --project-directory deploy down`. Os dados e as credenciais ficam nos volumes.
 
 > O `docker-compose.yaml` é gerado a partir do AppHost. Se alguém mudar o `AppHost.cs`, regenere
 > na pasta do AppHost:
@@ -223,10 +227,24 @@ Com o ambiente no ar (de preferência com as réplicas padrão), no Git Bash:
 ./infra/falhas/limpar.sh           # remove do catálogo os vídeos de teste
 ```
 
-O F5 (cota concorrente) precisa do token de administrador gerado no passo 3:
+### Token administrativo
+
+Para o F5 e o reset de cota, carregue o token do ambiente em uso no Git Bash, na raiz do repositório.
+Com o Docker Compose, leia o valor do volume montado no Identity.
+
+```bash
+export IDENTITY_ADMIN_TOKEN="$(docker compose --project-directory deploy exec -T identityservice sh -c 'cat /run/youtubesd/admin-token/value')"
+```
+
+Com o Aspire, use o arquivo criado pelo `SecuritySetup`.
 
 ```bash
 export IDENTITY_ADMIN_TOKEN=$(grep '^IDENTITY_ADMIN_TOKEN=' deploy/.env | cut -d= -f2-)
+```
+
+Com a variável definida, execute o F5 no mesmo terminal.
+
+```bash
 ./services/identity/scripts/f5-cota.sh
 ```
 
@@ -279,8 +297,9 @@ cd deploy && docker compose down -v
 docker volume rm youtubesd-kafka-data youtubesd-mysql-data youtubesd-ministack-data
 ```
 
-Não apague `.secrets/security.json` nem `deploy/.env` para isso: eles não guardam dados, só as
-chaves.
+No Compose, `down -v` também remove os volumes de credenciais. Na próxima subida, o
+inicializador volta a importar os valores fornecidos em `deploy/.env` e gera os que faltam.
+Uma nova chave de assinatura invalida os JWTs anteriores. As chaves do Aspire ficam em `.secrets/security.json`.
 
 ---
 
@@ -289,7 +308,9 @@ chaves.
 | Sintoma | Causa provável | O que fazer |
 |---|---|---|
 | `port is already allocated` (8080, 3306, 9092…) | O outro ambiente ainda está no ar | Veja [Trocar de ambiente](#trocar-de-ambiente) |
-| Security não sobe e reclama de `SigningKeyBase64` | Passo 3 não foi feito | `dotnet run --project services/security/tools/SecuritySetup` |
+| Aspire acusa falta de `SigningKeyBase64` | A chave local ainda precisa ser preparada | Execute o passo 3 |
+| Compose avisa `variable is not set` para as credenciais quando elas não foram fornecidas por variável ou arquivo `.env` | O YAML base lê essas variáveis antes de aplicar o override | Confira `docker compose --project-directory deploy ps -a security-init`. O código zero indica que o inicializador preparou as credenciais |
+| `security-init` termina com erro | O inicializador encontrou um problema ao gerar ou importar uma credencial | Consulte `docker compose --project-directory deploy logs security-init` |
 | `401` em todas as rotas pessoais | Token expirado (15 min) ou chave regenerada | Faça login de novo |
 | Upload termina em `FAILED` com cota rejeitada | O usuário já usou as 10 vagas | Zere a cota (veja [Zerar a cota](#zerar-a-cota)), remova vídeos antigos (`DELETE /api/upload/videos/{id}` devolve a vaga) ou use outro usuário |
 | Vídeo parado em `PROCESSING` / `QUEUED` | Nenhum media-processor no ar | Confira no dashboard; o vídeo espera na fila até 30 min |
@@ -301,10 +322,10 @@ chaves.
 ### Zerar a cota
 
 Cada usuário tem 10 vagas. Os vídeos de teste do `enviar-video.sh` usam o usuário
-`demo-upload@youtubesd.local`; para devolver as vagas dele:
+`demo-upload@youtubesd.local`. Carregue o [token administrativo](#token-administrativo) e execute
+os comandos no mesmo terminal para devolver as vagas desse usuário.
 
 ```bash
-export IDENTITY_ADMIN_TOKEN=$(grep '^IDENTITY_ADMIN_TOKEN=' deploy/.env | cut -d= -f2-)
 TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"demo-upload@youtubesd.local","password":"SenhaDemo123!"}' \

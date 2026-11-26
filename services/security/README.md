@@ -4,7 +4,15 @@ Serviço de autenticação do YoutubeSD, em ASP.NET Core / .NET 10. O Identity m
 
 ## Preparar e executar
 
-Na raiz do repositório, com Docker Desktop aberto:
+Com o Docker Desktop aberto, suba pelo **Docker Compose** a partir da raiz do repositório.
+
+```sh
+docker compose --project-directory deploy up --build -d
+```
+
+O `security-init` gera uma chave RSA de 3072 bits, a chave interna e o token administrativo. Se houver valores em `deploy/.env` na primeira subida, ele os aproveita. As credenciais persistem nos volumes do Docker entre reinícios e recriações dos contêineres.
+
+Para subir pelo **Aspire**, execute na raiz do repositório os comandos abaixo.
 
 ```sh
 dotnet run --project services/security/tools/SecuritySetup
@@ -12,9 +20,7 @@ cd Orchestrador/YoutubeOrchestrador/YoutubeOrchestrador.AppHost
 dotnet run --launch-profile http
 ```
 
-Ou, depois da preparação, `docker compose up --build -d` em `deploy/`.
-
-O utilitário gera uma chave RSA de 3072 bits e segredos locais em `.secrets/security.json` e `deploy/.env` (ignorados pelo Git e pelos builds Docker). Executá-lo novamente preserva os valores. Todas as réplicas recebem a mesma chave via configuração. Não apague esses arquivos ao reiniciar: substituir a chave invalida tokens já emitidos.
+O `SecuritySetup` gera uma chave RSA de 3072 bits e segredos locais em `.secrets/security.json` e `deploy/.env` (ignorados pelo Git e pelos builds Docker). Executá-lo novamente preserva os valores. Todas as réplicas recebem a mesma chave via configuração. Substituir a chave invalida tokens já emitidos.
 
 O `SecuritySetup` é uma ferramenta de preparação do ambiente local. Sua execução é manual e ele não é incluído na publicação da API nem executado na inicialização do serviço. Em produção, a chave de assinatura e os segredos devem ser provisionados pela infraestrutura e fornecidos pelas configurações documentadas abaixo, compartilhando a mesma chave entre as réplicas. O serviço exige esses valores e não gera uma chave automaticamente.
 
@@ -68,7 +74,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File services/security/scripts/va
 
 Os testes automatizados criam um MySQL descartável com Testcontainers e simulam o Identity. Cobrem assinatura, claims, erros, rotação, expiração, reutilização, múltiplas instâncias e concorrência real no MySQL. O smoke usa o ambiente completo pelo gateway e demonstra a validação do token C# no Download Java. Não imprime tokens; deixa um usuário e um progresso de teste identificados por `security-smoke`.
 
-O reset administrativo da demonstração F5 exige `IDENTITY_ADMIN_TOKEN` (valor do `deploy/.env`). As APIs `/api/identity/internal/**` são bloqueadas no gateway e exigem a chave interna quando acessadas diretamente.
+O reset administrativo da demonstração F5 exige `IDENTITY_ADMIN_TOKEN`. As APIs `/api/identity/internal/**` são bloqueadas no gateway e exigem a chave interna quando acessadas diretamente. [Como obter o token administrativo](../../docs/COMO-INICIAR.md#token-administrativo)
 
 `validate-compose.ps1` reinicia o Security, verifica a persistência da chave/sessão, para o Security para testar validação com JWKS em cache, interrompe o Identity para conferir 503 e recuperação sem consumir refresh, e envia 12 renovações simultâneas pelo gateway. Restaura os serviços no final e não imprime segredos.
 
