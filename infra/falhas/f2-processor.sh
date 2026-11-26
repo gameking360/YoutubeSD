@@ -30,7 +30,7 @@ echo "videoId=$VIDEO_ID"
 rodando() { [ -n "$(sql_db_valor media_db "SELECT instance_id FROM processing_job WHERE video_id = '$VIDEO_ID' AND status = 'RUNNING'")" ]; }
 aguardar 120 rodando
 VITIMA_NOME=$(sql_db_valor media_db "SELECT instance_id FROM processing_job WHERE video_id = '$VIDEO_ID'")
-VITIMA=$(for r in $(processadores); do [ "$(nome_curto "$r")" = "$VITIMA_NOME" ] && echo "$r"; done | head -1)
+VITIMA=$(for r in $(processadores); do if [ "$(nome_curto "$r")" = "$VITIMA_NOME" ]; then echo "$r"; fi; done | head -1)
 sleep 3
 
 passo "docker kill $VITIMA_NOME às $(date +%T) (processando o vídeo)"

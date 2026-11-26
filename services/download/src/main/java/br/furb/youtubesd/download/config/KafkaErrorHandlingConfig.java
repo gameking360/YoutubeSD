@@ -1,6 +1,5 @@
 package br.furb.youtubesd.download.config;
 
-import br.furb.youtubesd.download.messaging.InvalidMessageException;
 import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +30,6 @@ public class KafkaErrorHandlingConfig {
             deadLetter.accept(record, ex);
         }, new FixedBackOff(RETRY_INTERVAL_MS, MAX_RETRIES));
 
-        handler.addNotRetryableExceptions(InvalidMessageException.class);
         handler.setRetryListeners((record, ex, attempt) ->
                 log.warn("Tentativa {} de {} falhou: topico={} chave={} motivo={}",
                         attempt, MAX_RETRIES + 1, record.topic(), record.key(), rootMessage(ex)));

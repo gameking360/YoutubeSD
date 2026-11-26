@@ -33,12 +33,22 @@ sem_hls() { [ "$(s3_contar videos-hls "$VIDEO_ID/")" = "0" ]; }
 aguardar 30 sem_hls || true
 echo "videos-hls/$VIDEO_ID/: $(s3_contar videos-hls "$VIDEO_ID/") objetos"
 
+passo "Cota no identity_db (a reserva precisa ficar RELEASED)"
+liberada() { [ "$(sql_db_valor identity_db "SELECT status FROM quota_reservations WHERE video_id = '$VIDEO_ID'")" = "RELEASED" ]; }
+aguardar 30 liberada || true
+sql_db identity_db "SELECT status, DATE_FORMAT(updated_at, '%T') AS hora FROM quota_reservations WHERE video_id = '$VIDEO_ID'"
+RESERVA=$(sql_db_valor identity_db "SELECT status FROM quota_reservations WHERE video_id = '$VIDEO_ID'")
+
+passo "Cliente notificado (upload_db.user_notification)"
+sql_db upload_db "SELECT type, DATE_FORMAT(created_at, '%T') AS hora, message FROM user_notification WHERE video_id = '$VIDEO_ID' ORDER BY id"
+NOTIFICADO=$(sql_db_valor upload_db "SELECT COUNT(*) FROM user_notification WHERE video_id = '$VIDEO_ID' AND type = 'VIDEO_FAILED'")
+
 STATUS=$(sql_db_valor upload_db "SELECT CONCAT(status, '/', IFNULL(failure_reason, '')) FROM video_upload WHERE video_id = '$VIDEO_ID'")
 PUBLICADOS=$(sql_db_valor upload_db "SELECT COUNT(*) FROM outbox WHERE message_key = '$VIDEO_ID' AND type = 'VideoPublished'")
 CATALOGO=$(sql_db_valor download_db "SELECT COUNT(*) FROM video_catalog WHERE video_id = '$VIDEO_ID'")
 
-if [ "$STATUS" = "FAILED/DEADLINE_EXPIRED" ] && tardio && [ "$PUBLICADOS" = "0" ] && [ "$CATALOGO" = "0" ] && sem_hls; then
-  resultado ok "prazo vencido compensado; resultado tardio descartado e HLS apagado; nada no catálogo."
+if [ "$STATUS" = "FAILED/DEADLINE_EXPIRED" ] && tardio && [ "$PUBLICADOS" = "0" ] && [ "$CATALOGO" = "0" ] && sem_hls && [ "$RESERVA" = "RELEASED" ] && [ "$NOTIFICADO" -ge 1 ]; then
+  resultado ok "prazo vencido compensado (cota devolvida, cliente notificado); resultado tardio descartado e HLS apagado; nada no catálogo."
 else
-  resultado falhou "status=$STATUS videoPublished=$PUBLICADOS catalogo=$CATALOGO"
+  resultado falhou "status=$STATUS videoPublished=$PUBLICADOS catalogo=$CATALOGO reserva=$RESERVA notificado=$NOTIFICADO"
 fi
