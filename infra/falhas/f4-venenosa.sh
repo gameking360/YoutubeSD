@@ -7,7 +7,7 @@ VIDEO="falha-f4-$(date +%s)"
 DLQ="$TOPICO.dlq"
 
 titulo "F4 — Mensagem venenosa (payload inválido)"
-echo "Esperado: a inválida é tentada 4 vezes (1 + 3 novas tentativas, a cada 1 s), vai para $DLQ com o motivo,"
+echo "Esperado: a inválida está fora do contrato, então não é repetida: vai direto para $DLQ com o motivo,"
 echo "e a válida publicada logo depois, na mesma partição, é processada normalmente."
 
 passo "Publicando uma mensagem inválida e, em seguida, uma válida (mesma chave e partição)"
@@ -34,16 +34,16 @@ else
   echo "nenhuma mensagem com a chave $VIDEO na DLQ"
 fi
 
-passo "Tentativas, DLQ e a mensagem seguinte (logs das réplicas)"
+passo "DLQ e a mensagem seguinte (logs das réplicas)"
 logs_replicas "$VIDEO"
 TENTATIVAS=$(logs_replicas "Tentativa .* chave=$VIDEO" | wc -l)
-echo "tentativas que falharam antes da DLQ: $TENTATIVAS"
+echo "tentativas antes da DLQ: $TENTATIVAS (só a entrega original; mensagem fora do contrato não é repetida)"
 
 passo "A mensagem válida seguinte"
 sql "SELECT video_id, title, status FROM video_catalog WHERE video_id = '$VIDEO'"
 
-if [ -n "$NA_DLQ" ] && processada && [ "$TENTATIVAS" -ge 3 ]; then
-  resultado ok "a inválida foi tentada $TENTATIVAS vezes, foi para a DLQ, e a válida seguinte foi processada."
+if [ -n "$NA_DLQ" ] && processada && [ "$TENTATIVAS" -eq 1 ]; then
+  resultado ok "a inválida foi direto para a DLQ, sem repetir, e a válida seguinte foi processada."
 else
   resultado falhou "na_dlq=$([ -n "$NA_DLQ" ] && echo sim || echo nao) valida_processada=$(processada && echo sim || echo nao) tentativas=$TENTATIVAS"
 fi
