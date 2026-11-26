@@ -11,7 +11,13 @@ titulo "F6 — Broker fora do ar por ${PARADA}s"
 echo "Esperado: o Download segue respondendo; ao voltar, o Kafka entrega o evento novo sem reiniciar nenhuma réplica."
 
 passo "Antes"
-for r in $(replicas); do echo "$(nome_curto "$r"): reinícios=$(docker inspect "$r" --format '{{.RestartCount}}')"; done
+ANTES=$(replicas)
+REINICIOS_ANTES=0
+for r in $ANTES; do
+  n=$(docker inspect "$r" --format '{{.RestartCount}}')
+  REINICIOS_ANTES=$((REINICIOS_ANTES + n))
+  echo "$(nome_curto "$r"): reinícios=$n"
+done
 
 passo "Parando o Kafka às $(date +%T)"
 docker stop "$KAFKA" > /dev/null
@@ -39,14 +45,18 @@ sql "SELECT video_id, title, status FROM video_catalog WHERE video_id = '$VIDEO'
 
 passo "Depois"
 REINICIOS=0
-for r in $(replicas); do
-  n=$(docker inspect "$r" --format '{{.RestartCount}}')
+PARADAS=0
+for r in $ANTES; do
+  estado=$(docker inspect "$r" --format '{{.State.Status}}' 2> /dev/null || echo removido)
+  n=$(docker inspect "$r" --format '{{.RestartCount}}' 2> /dev/null || echo 0)
   REINICIOS=$((REINICIOS + n))
-  echo "$(nome_curto "$r"): reinícios=$n"
+  [ "$estado" = "running" ] || PARADAS=$((PARADAS + 1))
+  echo "$(nome_curto "$r"): estado=$estado reinícios=$n"
 done
+REINICIOS=$((REINICIOS - REINICIOS_ANTES))
 
-if processado && [ "$REINICIOS" -eq 0 ]; then
+if processado && [ "$REINICIOS" -eq 0 ] && [ "$PARADAS" -eq 0 ]; then
   resultado ok "o Download continuou no ar e consumiu o evento novo sem reiniciar."
 else
-  resultado falhou "processado=$(processado && echo sim || echo nao) reinicios=$REINICIOS"
+  resultado falhou "processado=$(processado && echo sim || echo nao) reinicios=$REINICIOS paradas=$PARADAS"
 fi
