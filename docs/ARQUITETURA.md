@@ -593,7 +593,8 @@ Cada decisão traz o motivo, a alternativa mais óbvia e o custo que aceitamos a
 #### D24. APIs internas protegidas em duas camadas
 - **Decisão:** `/api/identity/internal/**` exige `X-Internal-Key` e, além disso, o gateway
   devolve 404 para esse prefixo. O reset de cota exige `X-Admin-Token`. Sem configuração, o
-  acesso é negado. Os segredos são gerados pelo `SecuritySetup` e nunca vão para o Git.
+  acesso é negado. No Aspire, o `SecuritySetup` gera os segredos. No Compose, o
+  `security-init` os gera ou importa e os mantém em volumes do Docker. Os segredos ficam fora do Git.
 - **Por quê:** a API que confere senha não pode ser alcançada de fora, mesmo se alguém errar a
   configuração de uma das camadas.
 - **Em vez de:** confiar só na rede interna.
