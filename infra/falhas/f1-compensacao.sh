@@ -33,12 +33,16 @@ limpo() { [ "$(s3_contar videos-raw "$VIDEO_ID/")" = "0" ] && [ "$(s3_contar vid
 aguardar 30 limpo || true
 echo "videos-raw/$VIDEO_ID/: $(s3_contar videos-raw "$VIDEO_ID/") objetos, videos-hls/$VIDEO_ID/: $(s3_contar videos-hls "$VIDEO_ID/") objetos"
 
+passo "Cliente notificado (upload_db.user_notification)"
+sql_db upload_db "SELECT type, DATE_FORMAT(created_at, '%T') AS hora, message FROM user_notification WHERE video_id = '$VIDEO_ID' ORDER BY id"
+NOTIFICADO=$(sql_db_valor upload_db "SELECT COUNT(*) FROM user_notification WHERE video_id = '$VIDEO_ID' AND type = 'VIDEO_FAILED'")
+
 STATUS=$(sql_db_valor upload_db "SELECT CONCAT(status, '/', IFNULL(failure_reason, '')) FROM video_upload WHERE video_id = '$VIDEO_ID'")
 RESERVA=$(sql_db_valor identity_db "SELECT status FROM quota_reservations WHERE video_id = '$VIDEO_ID'")
 PUBLICADOS=$(sql_db_valor upload_db "SELECT COUNT(*) FROM outbox WHERE message_key = '$VIDEO_ID' AND type = 'VideoPublished'")
 
-if [ "$STATUS" = "FAILED/PROCESSING_FAILED" ] && [ "$RESERVA" = "RELEASED" ] && [ "$PUBLICADOS" = "0" ] && limpo; then
-  resultado ok "compensado: FAILED, cota devolvida, S3 limpo, nenhum VideoPublished."
+if [ "$STATUS" = "FAILED/PROCESSING_FAILED" ] && [ "$RESERVA" = "RELEASED" ] && [ "$PUBLICADOS" = "0" ] && limpo && [ "$NOTIFICADO" -ge 1 ]; then
+  resultado ok "compensado: FAILED, cota devolvida, S3 limpo, cliente notificado, nenhum VideoPublished."
 else
-  resultado falhou "status=$STATUS reserva=$RESERVA videoPublished=$PUBLICADOS"
+  resultado falhou "status=$STATUS reserva=$RESERVA videoPublished=$PUBLICADOS notificado=$NOTIFICADO"
 fi

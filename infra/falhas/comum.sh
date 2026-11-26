@@ -73,6 +73,39 @@ uuid() {
   docker exec "$(container kafka)" cat /proc/sys/kernel/random/uuid
 }
 
+# uuid_seq <n>: messageId único para o n-ésimo evento de um lote (segundo atual + n), no formato UUID.
+# Gerado no shell, sem docker exec, para lotes grandes. Dois lotes no mesmo segundo nunca rodam juntos.
+UUID_BASE=$(date +%s)
+uuid_seq() {
+  printf '%08x-0000-4000-8000-%012x' "$UUID_BASE" "$1"
+}
+
+# porta_health <container>: código HTTP do /health da réplica, pela porta publicada no host
+porta_health() {
+  local porta
+  porta=$(docker port "$1" 8080 2> /dev/null | head -1 | sed 's/.*://')
+  [ -n "$porta" ] || { echo "000"; return; }
+  status_http "http://localhost:$porta/health"
+}
+
+# membros_grupo: quantas réplicas estão no grupo download agora (cada réplica tem um consumidor por tópico)
+membros_grupo() {
+  docker exec "$(container kafka)" kafka-consumer-groups --bootstrap-server localhost:9092     --describe --group download --members 2> /dev/null | awk '$1 == "download" {print $3}' | sort -u | wc -l | tr -d ' '
+}
+
+# particoes: dono de cada partição do tópico no grupo download, com o nome da réplica
+particoes() {
+  declare -A ip_replica
+  local r ip
+  for r in $(replicas); do
+    ip=$(docker inspect "$r" --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
+    ip_replica[$ip]=$(nome_curto "$r")
+  done
+  docker exec "$(container kafka)" kafka-consumer-groups --bootstrap-server localhost:9092 --describe --group download 2> /dev/null     | awk -v t="$TOPICO" '$2 == t {print $3, $8}' | sort -n | while read -r particao host; do
+      echo "  partição $particao -> ${ip_replica[${host#/}]:-sem dono}"
+    done
+}
+
 agora() {
   date -u +%Y-%m-%dT%H:%M:%S.%3NZ
 }
