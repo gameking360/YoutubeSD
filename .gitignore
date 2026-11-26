@@ -30,3 +30,15 @@ Thumbs.db
 *.pfx
 TestResults/
 *.log
+
+# Angular
+.DS_STORE
+
+/dist/
+/bazel-out
+/integration/bazel/bazel-*
+node_modules/
+modules/ssr-benchmarks/node_modules/
+/ngp-vscode-ng-language-service/dist/
+/.vscode-test/
+/.vscode-test-user-data/
