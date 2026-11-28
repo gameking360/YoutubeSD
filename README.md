@@ -18,6 +18,7 @@ services/
   download/   reprodução dos vídeos (Java, Spring Boot)
   identity/   usuários e cota de uploads (C#)
   upload/     envio e processamento dos vídeos (C#)
+frontend/     interface web (Angular, servida pelo nginx)
 contracts/    contratos das mensagens (JSON Schema)
 infra/
   kafka/      criação dos tópicos
@@ -72,6 +73,7 @@ docker compose --project-directory deploy up --build -d
 Em `deploy/`, o comando equivalente é `docker compose up --build -d`. Na primeira subida, o
 `security-init` aproveita as credenciais fornecidas em `deploy/.env` ou gera as que faltam.
 Ele as grava em volumes do Docker e encerra antes da partida do Security e do Identity.
+O front sobe junto e fica em http://localhost:4200.
 
 Para parar a partir da raiz, use `docker compose --project-directory deploy down`. Os dados e as
 credenciais persistem nos volumes. O dashboard do Aspire fica em http://localhost:18888 e seu
@@ -92,6 +94,7 @@ Aspire e Compose usam as mesmas portas. Antes de trocar:
 
 ## Endereços
 
+- Front: http://localhost:4200
 - Gateway: http://localhost:8080
 - Download (réplicas): http://localhost:8401, 8402 e 8403
 - Swagger do Download: http://localhost:8401/swagger-ui/index.html

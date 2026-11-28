@@ -206,4 +206,11 @@ for (var i = 1; i <= downloadReplicas; i++)
         .WaitFor(download);
 }
 
+// Front Angular servido pelo nginx; /api vai para o gateway pela mesma origem, sem CORS.
+builder.AddDockerfile("frontend", "../../../frontend/youtubesd")
+    .WithHttpEndpoint(port: 4200, targetPort: 80)
+    .WithHttpHealthCheck("/")
+    .WithEnvironment("GATEWAY_URL", gateway.GetEndpoint("http"))
+    .WaitFor(gateway);
+
 builder.Build().Run();

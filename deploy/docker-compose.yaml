@@ -541,6 +541,21 @@ services:
       resources:
         limits:
           memory: "768M"
+  frontend:
+    image: "youtubesd-frontend:latest"
+    build:
+      context: "../frontend/youtubesd"
+    environment:
+      GATEWAY_URL: "http://gateway:8080"
+    ports:
+      - "4200:80"
+    expose:
+      - "80"
+    depends_on:
+      gateway:
+        condition: "service_started"
+    networks:
+      - "aspire"
   kafka-ui:
     image: "docker.io/kafbat/kafka-ui:v1.5.0"
     environment:
