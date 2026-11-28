@@ -145,10 +145,27 @@ Do Upload e do media-processor (com pelo menos 2 réplicas do processor):
 ./infra/falhas/f1-compensacao.sh   # dependência falhando 100% → FAILED, cota devolvida, S3 limpo
 ./infra/falhas/f2-processor.sh     # docker kill no processor durante o job → outra réplica conclui
 ./infra/falhas/f7-prazo.sh         # resultado depois do prazo → compensação, resultado descartado
+./infra/falhas/f5-corrida.sh       # 100 uploads simultâneos para 10 vagas → 10 reservados, 90 compensados
 ```
 
 A falha e a latência da dependência (R5) são ligadas ao vivo pela tabela `media_db.chaos_settings`,
 sem reiniciar nada. Os scripts restauram o valor no final.
+
+## Versionamento de eventos
+
+O `VideoPublished` tem duas versões no mesmo tópico (`contracts/video-published.v1.schema.json` e
+`contracts/video-published.v2.schema.json`). O Download aceita as duas; uma versão desconhecida vai para a DLQ.
+O Identity, que só lê o `videoId`, continua funcionando com as duas.
+
+```
+./infra/kafka/versoes-video-published.sh
+```
+
+## Tracing
+
+As réplicas do Download rodam com o agente OpenTelemetry Java e enviam traces, logs e métricas ao painel
+(Aspire: link impresso no terminal; Compose: http://localhost:18888). Uma requisição pelo gateway aparece como
+um único trace gateway → download-N, com as chamadas ao MySQL, ao Redis e ao S3.
 
 ## Autenticação e testes do Security
 
