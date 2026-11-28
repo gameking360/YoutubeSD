@@ -62,6 +62,11 @@ static class ComposeAjustes
             "YoutubeOrchestrador.Gateway.dll");
         services["gateway"].Ports.Add("8080:8080");
 
+        var frontend = services["frontend"];
+        frontend.Image = "youtubesd-frontend:latest";
+        frontend.Build = new Build { Context = "../frontend/youtubesd" };
+        frontend.Ports.Add("4200:80");
+
         Replicas(services, "upload", uploadReplicas, "youtubesd-upload", "services/upload/Dockerfile", 8500, "512M");
         Replicas(services, "media-processor", processorReplicas, "youtubesd-media-processor", "services/upload/media-processor.Dockerfile", 8600, "2G");
 

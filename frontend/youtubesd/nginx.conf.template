@@ -1,0 +1,20 @@
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # A API vai para o gateway pela mesma origem do front, sem CORS (o mesmo que o proxy do ng serve faz).
+    location /api/ {
+        proxy_pass ${GATEWAY_URL};
+        proxy_http_version 1.1;
+        proxy_set_header Origin "";
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_buffering off;
+        proxy_read_timeout 120s;
+        client_max_body_size 16m;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
