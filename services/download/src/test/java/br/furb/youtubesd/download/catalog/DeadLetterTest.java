@@ -68,6 +68,17 @@ class DeadLetterTest {
         assertThat(titulo("dlq-2")).isNull();
     }
 
+    @Test
+    void versaoDesconhecidaVaiDiretoParaADlq() throws Exception {
+        String v3 = mensagemValida("dlq-3", "Versão do futuro").replace("\"version\": 1,", "\"version\": 3,");
+        kafka.send(TOPIC, "dlq-3", v3).get();
+
+        ConsumerRecord<String, String> morta = aguardarNaDlq("dlq-3");
+
+        assertThat(header(morta, KafkaHeaders.DLT_EXCEPTION_MESSAGE)).contains("v3 não é suportado");
+        assertThat(titulo("dlq-3")).isNull();
+    }
+
     private ConsumerRecord<String, String> aguardarNaDlq(String key) {
         List<ConsumerRecord<String, String>> recebidas = new ArrayList<>();
         try (Consumer<String, String> consumer = consumerFactory.createConsumer("dlq-" + UUID.randomUUID(), null)) {

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "video-published.v2.schema.json",
+  "title": "VideoPublished v2",
+  "description": "Segunda versão do VideoPublished, no mesmo tópico video.published e com a mesma chave (videoId). Muda em relação à v1: a localização do HLS fica agrupada em hls (bucket, masterKey e renditions) e a duração vem em milissegundos (durationMs). videoId e ownerId continuam no mesmo lugar, então consumidores que só leem esses campos seguem funcionando com as duas versões.",
+  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "VideoPublished" },
+    "version": { "const": 2 },
+    "payload": {
+      "type": "object",
+      "required": ["videoId", "ownerId", "title", "visibility", "durationMs", "hls", "publishedAt"],
+      "properties": {
+        "videoId": { "type": "string", "minLength": 1 },
+        "ownerId": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "visibility": { "enum": ["PUBLIC", "UNLISTED", "PRIVATE"] },
+        "durationMs": { "type": "integer", "minimum": 1 },
+        "hls": {
+          "type": "object",
+          "required": ["bucket", "masterKey", "renditions"],
+          "properties": {
+            "bucket": { "type": "string", "minLength": 1 },
+            "masterKey": {
+              "description": "Caminho do master.m3u8 dentro do bucket, ex.: 456/master.m3u8.",
+              "type": "string",
+              "minLength": 1
+            },
+            "renditions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["name", "width", "height", "bandwidth"],
+                "properties": {
+                  "name": { "type": "string", "minLength": 1 },
+                  "width": { "type": "integer", "minimum": 1 },
+                  "height": { "type": "integer", "minimum": 1 },
+                  "bandwidth": { "type": "integer", "minimum": 1 }
+                }
+              }
+            }
+          }
+        },
+        "thumbnailKey": { "type": "string" },
+        "publishedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

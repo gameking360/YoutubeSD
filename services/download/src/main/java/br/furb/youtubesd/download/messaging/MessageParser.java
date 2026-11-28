@@ -22,31 +22,35 @@ public class MessageParser {
     }
 
     public <T> ParsedMessage<T> parse(String json, String expectedType, int expectedVersion, Class<T> payloadType) {
-        MessageEnvelope envelope = read(json, MessageEnvelope.class);
-        requireValidUuid(envelope.messageId());
+        MessageEnvelope envelope = envelope(json);
 
         if (!expectedType.equals(envelope.type()) || envelope.version() != expectedVersion) {
             throw new InvalidMessageException("Esperado " + expectedType + " v" + expectedVersion
                     + ", recebido " + envelope.type() + " v" + envelope.version());
         }
 
-        T payload = convert(envelope, payloadType);
-        return new ParsedMessage<>(envelope, payload);
+        return new ParsedMessage<>(envelope, payload(envelope, payloadType));
     }
 
-    private MessageEnvelope read(String json, Class<MessageEnvelope> type) {
-        try {
-            return validate(mapper.readValue(json, type));
-        } catch (JacksonException ex) {
-            throw new InvalidMessageException("JSON inválido: " + ex.getOriginalMessage(), ex);
-        }
+    public MessageEnvelope envelope(String json) {
+        MessageEnvelope envelope = read(json);
+        requireValidUuid(envelope.messageId());
+        return envelope;
     }
 
-    private <T> T convert(MessageEnvelope envelope, Class<T> payloadType) {
+    public <T> T payload(MessageEnvelope envelope, Class<T> payloadType) {
         try {
             return validate(mapper.treeToValue(envelope.payload(), payloadType));
         } catch (JacksonException ex) {
             throw new InvalidMessageException("Payload inválido: " + ex.getOriginalMessage(), ex);
+        }
+    }
+
+    private MessageEnvelope read(String json) {
+        try {
+            return validate(mapper.readValue(json, MessageEnvelope.class));
+        } catch (JacksonException ex) {
+            throw new InvalidMessageException("JSON inválido: " + ex.getOriginalMessage(), ex);
         }
     }
 
