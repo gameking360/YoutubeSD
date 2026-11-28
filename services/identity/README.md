@@ -132,7 +132,7 @@ Com o ambiente no ar e o Identity consumindo o Kafka:
 ./services/identity/scripts/f5-cota.sh
 ```
 
-Antes, configure `IDENTITY_ADMIN_TOKEN` com o valor de `deploy/.env`. O script verifica o retorno do reset protegido antes de publicar as mensagens.
+Antes, configure `IDENTITY_ADMIN_TOKEN` com o valor do ambiente em uso. O script verifica o retorno do reset protegido antes de publicar as mensagens. [Como obter o token](../../docs/COMO-INICIAR.md#token-administrativo)
 
 O script cria um usuário, publica 100 pedidos de reserva e confere no banco 10 reservas ativas e 90 rejeições.
 
@@ -141,4 +141,4 @@ O script cria um usuário, publica 100 pedidos de reserva e confere no banco 10 
 - **Upload**: precisa publicar `quota.reserve-requested` e `quota.release-requested` no formato dos contratos acima e consumir `quota.reserved`/`quota.rejected`. Hoje o Upload ainda é o projeto vazio; até lá o script F5 publica as mensagens manualmente.
 - **Security**: chama `POST /api/identity/internal/authenticate` para validar e-mail/senha e emite JWT com `sub` = `users.id`; consulta o contexto interno por ID a cada refresh. O login é do Security.
 - **Gateway**: rota `/api/identity/**` já configurada em `YoutubeOrchestrador.Gateway/appsettings.json`.
-- **Compose**: gerado pelo AppHost, inclui Identity e Security. Execute a preparação das chaves antes de subir.
+- O Compose inicia Identity e Security com as credenciais preparadas automaticamente pelo `security-init`. Em `deploy/`, execute `docker compose up --build -d`.

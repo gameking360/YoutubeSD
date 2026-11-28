@@ -36,9 +36,9 @@ public class CatalogService {
 
         boolean applied = catalog.upsertPublished(video, envelope.version(), envelope.occurredAt());
 
-        log.info("{}: videoId={} messageId={} correlationId={} instancia={}",
+        log.info("{}: videoId={} messageId={} correlationId={} instancia={} versao={}",
                 applied ? "VideoPublished aplicado" : "VideoPublished desatualizado ignorado",
-                video.videoId(), envelope.messageId(), envelope.correlationId(), instanceId);
+                video.videoId(), envelope.messageId(), envelope.correlationId(), instanceId, envelope.version());
     }
 
     @Transactional
