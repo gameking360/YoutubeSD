@@ -12,7 +12,10 @@ export const CONFIG = {
     uploads: '/api/upload/videos',
     catalog: '/api/download/videos',
     progress: '/api/download/progress',
+    notifications: '/api/upload/notifications',
   },
   progressIntervalMs: 10_000,
   uploadPollMs: 3_000,
+  // partes enviadas em paralelo (o gateway distribui entre as réplicas do Upload)
+  uploadConcurrency: 3,
 };
