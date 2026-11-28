@@ -63,6 +63,52 @@ class VideoPublishedConsumerTest {
         assertThat(titulo("video-3")).isEqualTo("Versão nova");
     }
 
+    @Test
+    void v1EV2ConvivemNoMesmoTopico() throws Exception {
+        publicar("video-v1", UUID.randomUUID().toString(), "Publicado na v1", "2026-11-28T10:00:00Z");
+        publicarV2("video-v2", UUID.randomUUID().toString(), "Publicado na v2", "2026-11-28T10:00:01Z");
+
+        await().atMost(TIMEOUT).untilAsserted(() -> {
+            assertThat(titulo("video-v1")).isEqualTo("Publicado na v1");
+            assertThat(titulo("video-v2")).isEqualTo("Publicado na v2");
+        });
+        assertThat(coluna("video-v1", "event_version")).isEqualTo("1");
+        assertThat(coluna("video-v2", "event_version")).isEqualTo("2");
+        assertThat(coluna("video-v2", "duration_sec")).isEqualTo("600");
+        assertThat(coluna("video-v2", "master_key")).isEqualTo("video-v2/master.m3u8");
+    }
+
+    private void publicarV2(String videoId, String messageId, String title, String occurredAt) throws Exception {
+        String json = """
+                {
+                  "messageId": "%s",
+                  "correlationId": "%s",
+                  "type": "VideoPublished",
+                  "version": 2,
+                  "occurredAt": "%s",
+                  "payload": {
+                    "videoId": "%s",
+                    "ownerId": "dono-1",
+                    "title": "%s",
+                    "visibility": "PUBLIC",
+                    "durationMs": 600000,
+                    "hls": {
+                      "bucket": "videos-hls",
+                      "masterKey": "%s/master.m3u8",
+                      "renditions": [{"name": "360p", "width": 640, "height": 360, "bandwidth": 800000}]
+                    },
+                    "publishedAt": "%s"
+                  }
+                }
+                """.formatted(messageId, videoId, occurredAt, videoId, title, videoId, occurredAt);
+        kafka.send(TOPIC, videoId, json).get();
+    }
+
+    private String coluna(String videoId, String nome) {
+        return jdbc.sql("SELECT CAST(" + nome + " AS CHAR) FROM video_catalog WHERE video_id = :id")
+                .param("id", videoId).query(String.class).single();
+    }
+
     private void publicar(String videoId, String messageId, String title, String occurredAt) throws Exception {
         String json = """
                 {

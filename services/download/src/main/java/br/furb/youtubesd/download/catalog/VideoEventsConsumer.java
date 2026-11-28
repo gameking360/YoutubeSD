@@ -9,16 +9,18 @@ import org.springframework.stereotype.Component;
 public class VideoEventsConsumer {
 
     private final MessageParser parser;
+    private final VideoPublishedReader publishedReader;
     private final CatalogService service;
 
-    public VideoEventsConsumer(MessageParser parser, CatalogService service) {
+    public VideoEventsConsumer(MessageParser parser, VideoPublishedReader publishedReader, CatalogService service) {
         this.parser = parser;
+        this.publishedReader = publishedReader;
         this.service = service;
     }
 
     @KafkaListener(topics = "${download.topics.video-published}")
     public void onVideoPublished(ConsumerRecord<String, String> record) {
-        service.applyPublished(parser.parse(record.value(), "VideoPublished", 1, VideoPublishedPayload.class));
+        service.applyPublished(publishedReader.read(record.value()));
     }
 
     @KafkaListener(topics = "${download.topics.video-removed}")
