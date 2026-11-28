@@ -74,8 +74,8 @@ dotnet run --launch-profile http
 ```
 
 O dashboard abre em **http://localhost:15006**. Espere todos os recursos ficarem verdes
-(`Running` / `Healthy`); na primeira vez, as imagens Docker do Upload, do media-processor e do
-Download são compiladas e isso demora.
+(`Running` / `Healthy`); na primeira vez, as imagens Docker do Upload, do media-processor, do
+Download e do front são compiladas e isso demora. O front fica em **http://localhost:4200**.
 
 O número de réplicas e os recursos são parâmetros:
 
@@ -104,7 +104,7 @@ inicializador termina com sucesso.
 
 A partir da raiz, acompanhe com `docker compose --project-directory deploy ps -a`. Os serviços
 devem ficar em execução e os inicializadores `security-init` e `kafka-init` devem terminar com
-código zero. O dashboard do Aspire fica em **http://localhost:18888**. Para consultar seu token de acesso, use o comando abaixo.
+código zero. O front fica em **http://localhost:4200** e o dashboard do Aspire em **http://localhost:18888**. Para consultar o token de acesso do dashboard, use o comando abaixo.
 
 ```bash
 docker compose --project-directory deploy logs compose-dashboard
@@ -122,6 +122,7 @@ Para parar, execute `docker compose --project-directory deploy down`. Os dados e
 
 | O quê | Como conferir |
 |---|---|
+| Front | http://localhost:4200 abre a tela de login |
 | Gateway | `curl http://localhost:8080/health` responde `Healthy` |
 | Kafka e tópicos | http://localhost:8090 lista os 10 tópicos e as `.dlq` |
 | Download | Swagger em http://localhost:8401/swagger-ui/index.html |
@@ -132,6 +133,9 @@ Para parar, execute `docker compose --project-directory deploy down`. Os dados e
 ---
 
 ## 6. Primeiro uso
+
+O jeito mais simples é pela interface: abra **http://localhost:4200**, crie uma conta, envie um
+vídeo em "Enviar vídeo" e assista em "Assistir". Os passos abaixo fazem o mesmo pelo terminal.
 
 Rode no **Git Bash**, na raiz do repositório.
 

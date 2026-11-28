@@ -1,31 +1,38 @@
 # Frontend YoutubeSD (Angular 20)
 
-Fala só com o gateway (http://localhost:8080). O `ng serve` usa `proxy.conf.json` para encaminhar `/api` ao gateway, então não há CORS.
+Interface web do YoutubeSD. Fala só com o gateway, pelo caminho `/api`: no Docker Compose e no
+Aspire, o nginx da imagem repassa `/api` ao gateway; no `ng serve`, o `proxy.conf.mjs` faz o
+mesmo. Como tudo sai da mesma origem, não há CORS.
 
 ## Rodar
 
+Com o sistema no ar pelo Docker Compose ou pelo Aspire, o front já sobe junto em
+**http://localhost:4200**.
+
+Para desenvolver com recarga automática, pare o container `frontend` (a porta é a mesma) e rode:
+
 ```
-cd frontend
+cd frontend/youtubesd
 npm install
 npm start
 ```
 
-Abra http://localhost:4200 com o ambiente (Aspire ou Compose) já no ar. Requer Node 20.19+ ou 22.12+.
+Requer Node 20.19+ ou 22.12+.
 
 ## Teste rápido
 
 1. Crie uma conta e entre; o cabeçalho mostra seu nome.
-2. "Enviar vídeo": acompanhe PENDING → PROCESSING → PUBLISHED e a cota (usados / em andamento / disponíveis).
+2. "Enviar vídeo": acompanhe PENDING → PROCESSING → PUBLISHED, a cota e as notificações.
 3. "Assistir": escolha o vídeo, troque a qualidade, pause e recarregue a página para ver a retomada.
-4. Sem o Upload pronto: `./infra/seed/seed-video.sh demo-1 "Video de demonstracao"` publica um vídeo de exemplo.
+4. "Perfil": dados da conta, troca de nome e cota.
 
 ## Estrutura
 
 ```
-src/main.ts, index.html, styles.css
-src/app/app.ts, app.config.ts, app.routes.ts
-src/app/core/        config (URLs), auth (JWT + refresh), interceptor, guard, api
-src/app/pages/       login, watch (catálogo + player HLS + progresso), upload
+Dockerfile, nginx.conf.template   imagem do front (build do Angular servido pelo nginx)
+proxy.conf.mjs                    proxy do ng serve para o gateway
+src/app/core/                     config (URLs), auth (JWT + refresh), interceptor, guard, api
+src/app/pages/                    login, watch (catálogo, player HLS e progresso), upload, profile
 ```
 
 Endpoints usados (todos pelo gateway):
@@ -34,16 +41,7 @@ Endpoints usados (todos pelo gateway):
 |---|---|
 | Login | POST /api/auth/login, POST /api/auth/refresh (automático, uma renovação por vez) |
 | Cadastro | POST /api/identity/users |
-| Cabeçalho / cota | GET /api/identity/users/me, GET /api/identity/quota/me |
+| Cabeçalho / perfil / cota | GET e PUT /api/identity/users/me, GET /api/identity/quota/me |
 | Catálogo / player | GET /api/download/videos, /videos/{id}/playback, manifestos e segmentos HLS |
 | Progresso | PUT /api/download/progress/{id}, GET /api/download/progress?status=IN_PROGRESS |
-| Upload | POST /api/upload/videos, GET /api/upload/videos?owner=me |
-
-## Pendente de confirmação (Upload)
-
-O Upload não tem README. Confirme no controller e ajuste `src/app/core/api.service.ts` se precisar:
-- envio assumido como multipart com os campos `file` e `title`;
-- `GET /api/upload/videos?owner=me` assumido como lista com `videoId`, `title` e `status` (se vier como `{ items: [...] }`, ajuste `myUploads()`);
-- limite de corpo do YARP para arquivos grandes (combinar com o Integrante 1).
-
-Para falar direto com o gateway sem proxy, troque `gateway` em `src/app/core/config.ts` para `http://localhost:8080` e libere `http://localhost:4200` no CORS do gateway.
+| Upload | POST /api/upload/videos, PUT /api/upload/videos/{id}/parts/{n}, POST /api/upload/videos/{id}/complete, GET /api/upload/videos?owner=me, GET /api/upload/notifications |

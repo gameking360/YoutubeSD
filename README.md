@@ -6,6 +6,18 @@ Trabalho final de Sistemas Distribuídos — FURB.
 - [Como iniciar](docs/COMO-INICIAR.md): do clone ao primeiro vídeo publicado, passo a passo.
 - [Arquitetura e decisões](docs/ARQUITETURA.md): definição, mapa do sistema e o porquê de cada escolha.
 
+## Início rápido
+
+Com o Docker Desktop aberto, na raiz do repositório:
+
+```sh
+docker compose --project-directory deploy up --build -d
+```
+
+A primeira subida compila as imagens e leva alguns minutos. Depois, abra o front em
+**http://localhost:4200**, crie uma conta, envie um vídeo e assista. Os demais endereços estão
+em [Endereços](#endereços).
+
 ## Estrutura
 
 ```
@@ -94,13 +106,17 @@ Aspire e Compose usam as mesmas portas. Antes de trocar:
 
 ## Endereços
 
-- Front: http://localhost:4200
-- Gateway: http://localhost:8080
+Valem para o Compose e para o Aspire.
+
+- Front (interface web): http://localhost:4200
+- Gateway (entrada da API): http://localhost:8080. Security e Identity são acessados por ele, em `/api/auth` e `/api/identity`.
 - Download (réplicas): http://localhost:8401, 8402 e 8403
 - Swagger do Download: http://localhost:8401/swagger-ui/index.html
 - Upload (réplicas): http://localhost:8501 e 8502
 - media-processor (réplicas, só `/health`): http://localhost:8601 e 8602
 - Kafka UI: http://localhost:8090
+- Dashboard do Aspire (logs, traces e métricas): http://localhost:18888 no Compose; no Aspire, o link impresso no terminal (http://localhost:15006).
+- MySQL, Redis, Kafka e MiniStack (S3): no Compose ficam só na rede interna do Docker e são acessados pelos scripts de `infra/` e pelo Kafka UI; no Aspire ficam em 3306, 6379, 9092 e 4566.
 
 ## Upload de vídeos
 

@@ -62,7 +62,9 @@ os problemas clássicos de sistemas distribuídos:
 
 ```mermaid
 flowchart LR
-    cliente["Navegador / scripts"] --> gw["Gateway YARP<br/>:8080"]
+    cliente["Navegador"] --> fe["Front Angular<br/>nginx :4200"]
+    fe -->|/api| gw["Gateway YARP<br/>:8080"]
+    scripts["Scripts de infra/"] --> gw
 
     gw -->|/api/auth| sec["Security<br/>C# · ×1"]
     gw -->|/api/identity| idt["Identity<br/>C# · ×1"]
@@ -100,7 +102,8 @@ chave pública do JWT, feita uma vez e guardada em cache.
 
 | Origem → destino | Meio | Para quê |
 |---|---|---|
-| Cliente → gateway | HTTP | Toda entrada externa passa pela porta 8080 |
+| Navegador → front | HTTP | A interface fica na porta 4200; o nginx dela repassa `/api` ao gateway, na mesma origem |
+| Cliente → gateway | HTTP | Toda entrada externa da API passa pela porta 8080 |
 | Gateway → serviços | HTTP (YARP) | Roteia pelo prefixo `/api/<serviço>`, balanceia e afasta réplica doente |
 | Security → Identity | HTTP interno com `X-Internal-Key` | Confere a senha no login e relê o papel do usuário a cada refresh |
 | Identity, Upload, Download → Security | HTTP (JWKS, com cache) | Chave pública para validar o JWT localmente |
@@ -135,13 +138,14 @@ docs/          este documento e o guia de início
 
 | O quê | Endereço |
 |---|---|
-| Gateway (única entrada) | http://localhost:8080 |
+| Front (interface web) | http://localhost:4200 |
+| Gateway (única entrada da API) | http://localhost:8080 |
 | Dashboard do Aspire | http://localhost:15006 (AppHost) ou http://localhost:18888 (Compose) |
 | Kafka UI | http://localhost:8090 |
 | Download, réplicas | http://localhost:8401, 8402, 8403 (Swagger em `/swagger-ui/index.html`) |
 | Upload, réplicas | http://localhost:8501, 8502 |
 | media-processor, réplicas (só `/health`) | http://localhost:8601, 8602 |
-| MySQL / Redis / Kafka / S3 | 3306 / 6379 / 9092 / 4566 |
+| MySQL / Redis / Kafka / S3 | No Aspire: 3306 / 6379 / 9092 / 4566. No Compose ficam só na rede interna do Docker |
 
 ---
 
